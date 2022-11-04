@@ -1,0 +1,46 @@
+.fullScreen{
+    position: relative;
+    /* background-color: black; */
+    width: 100vw;
+    height: 100vh;
+    box-sizing: border-box;
+    border: "3px solid #000";
+    z-index: 3;
+}
+
+.canvasContainer{
+    position: relative;
+    width: 100vw;
+    height: 90vh;
+    /* background-color: red; */
+    border: "10px solid black";
+    z-index: -1;
+}
+
+.canvas1{
+    position: absolute;
+    /* background-color: blue; */
+    width: 100vw;
+    height: 100vh;
+    outline: "10px solid black";
+    z-index: 0;
+}
+.canvas2{
+    position: absolute;
+    /* background-color: green; */
+    width: 100vw;
+    height: 100vh;
+    border: "10px solid red";
+    z-index: 1;
+}
+
+.button{
+    position: relative;
+    float: left;
+    box-sizing: border-box;
+    width: 33.3333vw;
+    height: 10vh;
+    padding: '5px';
+    font-size: '1rem';
+    z-index: 2;
+}
