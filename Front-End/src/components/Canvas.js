@@ -124,7 +124,7 @@ export default function Canvas() {
                 // using the relative coordinate to the image because that's what focal click needs
                 const pointJson = {x: x_relative_to_image, y: y_relative_to_image, typeOfClick: typeOfClick};
                 axios.post(
-                    `http://localhost:8000/points/`, 
+                    `http://localhost:8000/clicks/`, 
                     pointJson
                 );
                 setPoints(prevPoints => {

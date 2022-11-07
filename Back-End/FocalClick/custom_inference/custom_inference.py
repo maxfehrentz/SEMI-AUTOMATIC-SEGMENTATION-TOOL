@@ -21,7 +21,7 @@ def evaluate_sample(image, clicks, prev_mask, predictor,
     # potential solution see https://stackoverflow.com/questions/33521891/from-jpg-to-b64encode-to-cv2-imread
     # image = cv2.imread(str(image_path))
 
-    # init_mask:
+    # prev_mask:
     # 
 
     # TODO: figure out a way to do this; probably just np.array filled with zeros of the same dimension as the image
@@ -34,6 +34,7 @@ def evaluate_sample(image, clicks, prev_mask, predictor,
         predictor.set_input_image(image)
         predictor.set_prev_mask(init_mask)
             
+        # TODO: adapt code in get_prediction
         pred_probs = predictor.get_prediction(clicks)
         pred_mask = pred_probs > pred_thr
         if progressive_mode:

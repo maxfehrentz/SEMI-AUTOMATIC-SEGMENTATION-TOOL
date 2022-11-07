@@ -12,7 +12,7 @@ class ClickType(str, Enum):
     positive = "positive"
     negative = "negative"
 
-class Point(BaseModel):
+class Click(BaseModel):
     x: float
     y: float
     typeOfClick: ClickType
@@ -20,6 +20,15 @@ class Point(BaseModel):
 app = FastAPI()
 
 current_image = ""
+mask = None
+clicks = []
+# TODO: import torch
+device = torch.device('cpu')
+path_to_model = "./FocalClick/models/focalclick/hrnet18s_S1_cclvs.pth"
+# TODO: import utils
+net = utils.load_is_model(checkpoint_path, device)
+# TODO: import predictor
+predictor = FocalPredictor(net, device)
 
 origins = [
     "http://localhost:3000",
@@ -43,13 +52,17 @@ async def root():
 @app.put("/image")
 async def update_image(imageBase64: ImageBase64):
     current_image = imageBase64.content
-    # TODO: convert this back to the format required by FocalClick
+    # resetting the clicks
+    clicks.clear()
     return current_image
 
-@app.post("/points/")
-async def add_point(point: Point):
-    print(f"received new point at {point.x} and {point.y} of type {point.typeOfClick}")
-    return point
+# TODO: move the whole click logic into the backend
+@app.post("/clicks/")
+async def add_clicks(click: Click):
+    print(f"received new click at {click.x} and {click.y} of type {click.typeOfClick}")
+    clicks.append(click)
+    evaluate_sample(current_image, clicks, mask, predictor)
+    return clicks, pred_mask
 
 
 
