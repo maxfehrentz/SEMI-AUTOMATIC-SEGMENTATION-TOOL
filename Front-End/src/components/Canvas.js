@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import './Canvas.css';
+import axios from 'axios';
 
 
 export default function Canvas() {
@@ -200,8 +201,11 @@ export default function Canvas() {
             image.src = reader.result;
         })
 
-        // setting the image when loaded
+        // setting the image when loaded and sending it to the backend
         image.onload = () => {
+            // reader.result contains the image in Base64 format; wrapping it in JSON to send it to the backend
+            const imageJson = {content: reader.result};
+            axios.put("http://localhost:8000/image", imageJson);
             setCurrentImage(image);
         };
     }
