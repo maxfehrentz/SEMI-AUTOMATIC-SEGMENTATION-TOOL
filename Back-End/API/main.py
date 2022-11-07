@@ -1,16 +1,21 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from enum import Enum
 
 # creating a data model for receiving the current image that was chosen in the frontend by the user in Base64 format
 # details on data models in FastAPI can be found here: https://fastapi.tiangolo.com/tutorial/body/
 class ImageBase64(BaseModel):
     content: str
 
+class ClickType(str, Enum):
+    positive = "positive"
+    negative = "negative"
+
 class Point(BaseModel):
     x: float
     y: float
-    typeOfClick: str
+    typeOfClick: ClickType
 
 app = FastAPI()
 

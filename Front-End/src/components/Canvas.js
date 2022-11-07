@@ -73,6 +73,7 @@ export default function Canvas() {
         if (!currentImage) {
             return;
         }
+        // TODO: scale the image to make it fill the screen as much as possible
         console.log("drawing the new image")
         let canvas = canvasRef1.current;
         let ctx = ctxRef1.current;
