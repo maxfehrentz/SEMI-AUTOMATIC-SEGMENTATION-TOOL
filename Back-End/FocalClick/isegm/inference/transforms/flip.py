@@ -1,7 +1,12 @@
 import torch
 
 from typing import List
-from isegm.inference.clicker import Click
+
+import sys
+import os
+
+sys.path.append(os.path.relpath("../FocalClick/isegm/inference"))
+from clicker import Click
 from .base import BaseTransform
 
 

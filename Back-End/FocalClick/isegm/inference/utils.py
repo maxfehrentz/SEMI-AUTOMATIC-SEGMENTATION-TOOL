@@ -4,9 +4,15 @@ from pathlib import Path
 import torch
 import numpy as np
 
-from isegm.data.datasets import GrabCutDataset, BerkeleyDataset, DavisDataset, SBDEvaluationDataset, PascalVocDataset, Davis585Dataset, COCOMValDataset
+# TODO: clean up this file later and remove everything that is not used
+# from isegm.data.datasets import GrabCutDataset, BerkeleyDataset, DavisDataset, SBDEvaluationDataset, PascalVocDataset, Davis585Dataset, COCOMValDataset
 
-from isegm.utils.serialization import load_model
+import sys
+import os
+# IMPORTANT: the relative path is relative to the importing file!!! since utils.py is imported in main.py, the path is relative to the location of main.py!
+# TODO: this is highly undesirable, check if there is a better solution for this mess
+sys.path.append(os.path.relpath("../FocalClick/isegm/utils"))
+from serialization import load_model
 
 
 def get_time_metrics(all_ious, elapsed_time):

@@ -2,6 +2,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from enum import Enum
+import torch
+
+import sys
+import os
+sys.path.append(os.path.relpath("../FocalClick/isegm/inference"))
+from utils import load_is_model
+sys.path.append(os.path.relpath("../FocalClick/isegm/inference/predictors"))
+from focalclick import FocalPredictor
 
 # creating a data model for receiving the current image that was chosen in the frontend by the user in Base64 format
 # details on data models in FastAPI can be found here: https://fastapi.tiangolo.com/tutorial/body/
@@ -22,12 +30,9 @@ app = FastAPI()
 current_image = ""
 mask = None
 clicks = []
-# TODO: import torch
 device = torch.device('cpu')
-path_to_model = "./FocalClick/models/focalclick/hrnet18s_S1_cclvs.pth"
-# TODO: import utils
-net = utils.load_is_model(checkpoint_path, device)
-# TODO: import predictor
+path_to_model = "../FocalClick/models/focalclick/hrnet18s_S1_cclvs.pth"
+net = load_is_model(path_to_model, device)
 predictor = FocalPredictor(net, device)
 
 origins = [

@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 
-from .log import logger
+from log import logger
 
 
 def get_dims_with_exclusion(dim, exclude=None):

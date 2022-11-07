@@ -1,8 +1,13 @@
 import torch
 
 from typing import List
-from isegm.inference.clicker import Click
-from isegm.utils.misc import get_bbox_iou, get_bbox_from_mask, expand_bbox, clamp_bbox
+
+import sys
+import os
+sys.path.append(os.path.relpath("../FocalClick/isegm/inference"))
+from clicker import Click
+sys.path.append(os.path.relpath("../FocalClick/isegm/utils"))
+from misc import get_bbox_iou, get_bbox_from_mask, expand_bbox, clamp_bbox
 from .base import BaseTransform
 
 
