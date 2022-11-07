@@ -119,8 +119,14 @@ export default function Canvas() {
         let y_relative_to_image = offsetY - centerShift_y.current;
         if (x_relative_to_image < currentImage.width && x_relative_to_image >= 0) {
             if (y_relative_to_image < currentImage.height && y_relative_to_image >= 0) {
+                // point has been placed within the image and needs to be rendered on the frontend and send to the backend
+                // using the relative coordinate to the image because that's what focal click needs
+                const pointJson = {x: x_relative_to_image, y: y_relative_to_image, typeOfClick: typeOfClick};
+                axios.post(
+                    `http://localhost:8000/points/`, 
+                    pointJson
+                );
                 setPoints(prevPoints => {
-                    // saving the relative coordinate to the image because that's what focal click needs
                     return [...prevPoints, {x: x_relative_to_image, y: y_relative_to_image, typeOfClick:typeOfClick}];
                 })
         

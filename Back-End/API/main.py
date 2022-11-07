@@ -7,6 +7,11 @@ from pydantic import BaseModel
 class ImageBase64(BaseModel):
     content: str
 
+class Point(BaseModel):
+    x: float
+    y: float
+    typeOfClick: str
+
 app = FastAPI()
 
 current_image = ""
@@ -35,6 +40,11 @@ async def update_image(imageBase64: ImageBase64):
     current_image = imageBase64.content
     # TODO: convert this back to the format required by FocalClick
     return current_image
+
+@app.post("/points/")
+async def add_point(point: Point):
+    print(f"received new point at {point.x} and {point.y} of type {point.typeOfClick}")
+    return point
 
 
 

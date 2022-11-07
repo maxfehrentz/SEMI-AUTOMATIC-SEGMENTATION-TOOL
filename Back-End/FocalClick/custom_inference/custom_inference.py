@@ -4,6 +4,10 @@ import ../isegm/model/is_segformer_model
 import ../models/focalclick/hrnet18s_S1_cclvs
 
 # adapted from evaluation.py
+def get_mask_for_click(x, y, typeOfClick) {
+    # TODO: implement
+    return
+}
 
 def evaluate_sample(image, gt_mask, init_mask, predictor, max_iou_thr,
                     pred_thr=0.49, min_clicks=1, max_clicks=20,
