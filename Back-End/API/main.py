@@ -16,7 +16,7 @@ from focalclick import FocalPredictor
 # creating a data model for receiving the current image that was chosen in the frontend by the user in Base64 format
 # details on data models in FastAPI can be found here: https://fastapi.tiangolo.com/tutorial/body/
 class ImageBase64(BaseModel):
-    content: str
+    content: bytes
 
 class ClickType(str, Enum):
     positive = "positive"
@@ -29,6 +29,7 @@ class Click(BaseModel):
 
 app = FastAPI()
 
+global current_image
 current_image = ""
 mask = None
 clicks = []
@@ -58,6 +59,7 @@ async def root():
 
 @app.put("/image")
 async def update_image(imageBase64: ImageBase64):
+    global current_image
     current_image = imageBase64.content
     # resetting the clicks
     clicks.clear()

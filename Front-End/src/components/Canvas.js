@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import './Canvas.css';
 import axios from 'axios';
 
+// TODO: connect point logic with the backend (removing previous point, removing all points)
+
 
 export default function Canvas() {
     const canvasRef1 = useRef(null);
@@ -195,6 +197,7 @@ export default function Canvas() {
         // removing everything
         clearCanvas();
 
+        // TODO: make sure to accept only .jpeg, .png, .jpg
         let [fileHandle] = await window.showOpenFilePicker();
         const file = await fileHandle.getFile();
 
@@ -204,17 +207,15 @@ export default function Canvas() {
         const reader = new FileReader();
         // CONVERTS Image TO BASE 64
         reader.readAsDataURL(file);
+        // setting the image when loaded and sending it to the backend
         reader.addEventListener("load", function () {
             image.src = reader.result;
-        })
-
-        // setting the image when loaded and sending it to the backend
-        image.onload = () => {
+            console.log(`encoded image: ${reader.result.split(',')[1]}`)
             // reader.result contains the image in Base64 format; wrapping it in JSON to send it to the backend
-            const imageJson = {content: reader.result};
+            const imageJson = {content: reader.result.split(',')[1]};
             axios.put("http://localhost:8000/image", imageJson);
             setCurrentImage(image);
-        };
+        })
     }
 
 	return (
