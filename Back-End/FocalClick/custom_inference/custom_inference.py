@@ -1,19 +1,19 @@
-import ../isegm/inference/predictors/__init__
-import ../isegm/inference/focalclick
-import ../isegm/model/is_segformer_model
-import ../models/focalclick/hrnet18s_S1_cclvs
+# from import "../isegm/inference/predictors/__init__" import *
+import os
+import sys
+sys.path.append(os.path.relpath("../FocalClick/isegm/inference/predictors"))
+import __init__
+import focalclick
+sys.path.append(os.path.relpath("../FocalClick/isegm/model"))
+import is_segformer_model
+sys.path.append(os.path.relpath("../FocalClick/models/focalclick"))
+import hrnet18s_S1_cclvs
 
-# adapted from evaluation.py
-def get_mask_for_click(x, y, typeOfClick) {
-    # TODO: implement
-    return
-}
-
-def evaluate_sample(image, clicks, prev_mask, predictor,
+def compute_mask(image, clicks, prev_mask, predictor,
                     pred_thr=0.49
                     ):
 
-    progressive_mode = true
+    progressive_mode = True
 
     # image:
     # taken from get_sample() in coco.py

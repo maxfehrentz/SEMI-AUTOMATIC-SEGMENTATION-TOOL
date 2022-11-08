@@ -2,11 +2,11 @@ import torch.nn as nn
 import torch
 import torch.nn.functional as F
 from isegm.utils.serialization import serialize
-from .is_model import ISModel
+from is_model import ISModel
 from isegm.model.ops import DistMaps, ScaleLayer, BatchImageNormalize
-from .modeling.hrnet_ocr import HighResolutionNet
+from modeling.hrnet_ocr import HighResolutionNet
 from isegm.model.modifiers import LRMult
-from .modeling.segformer.segformer_model import SegFormer
+from modeling.segformer.segformer_model import SegFormer
 from mmcv.cnn import ConvModule, DepthwiseSeparableConvModule
 import torchvision.ops.roi_align as roi_align
 from isegm.model.ops import DistMaps

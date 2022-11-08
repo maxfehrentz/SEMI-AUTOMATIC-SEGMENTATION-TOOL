@@ -8,6 +8,8 @@ import sys
 import os
 sys.path.append(os.path.relpath("../FocalClick/isegm/inference"))
 from utils import load_is_model
+sys.path.append(os.path.relpath("../FocalClick/custom_inference"))
+from custom_inference import compute_mask
 sys.path.append(os.path.relpath("../FocalClick/isegm/inference/predictors"))
 from focalclick import FocalPredictor
 
@@ -66,7 +68,7 @@ async def update_image(imageBase64: ImageBase64):
 async def add_clicks(click: Click):
     print(f"received new click at {click.x} and {click.y} of type {click.typeOfClick}")
     clicks.append(click)
-    evaluate_sample(current_image, clicks, mask, predictor)
+    compute_mask(current_image, clicks, mask, predictor)
     return clicks, pred_mask
 
 

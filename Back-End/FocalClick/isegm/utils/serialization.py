@@ -3,6 +3,11 @@ from copy import deepcopy
 import inspect
 import torch.nn as nn
 
+# TODO: find a better solution for this
+import sys
+import os
+sys.path.append(os.path.relpath("../FocalClick"))
+
 
 def serialize(init):
     parameters = list(inspect.signature(init).parameters)
