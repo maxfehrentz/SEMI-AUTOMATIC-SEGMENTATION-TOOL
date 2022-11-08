@@ -3,6 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from enum import Enum
 import torch
+import base64
+import io
+from PIL import Image
 
 import sys
 import os
@@ -29,8 +32,14 @@ class Click(BaseModel):
 
 app = FastAPI()
 
+# in base64 format
 global current_image
 current_image = ""
+
+# as Pytorch tensor
+global current_image_tensor
+current_image_tensor = None
+
 mask = None
 clicks = []
 device = torch.device('cpu')
@@ -60,9 +69,21 @@ async def root():
 @app.put("/image")
 async def update_image(imageBase64: ImageBase64):
     global current_image
+    global current_image_tensor
+
     current_image = imageBase64.content
+
+    # adapted from https://stackoverflow.com/questions/57318892/convert-base64-encoded-image-to-a-numpy-array
+    decoded_img = base64.b64decode(current_image)
+    decoded_img = Image.open(io.BytesIO(decoded_img))
+    img_np = np.array(decoded_img, dtype = np.uint8)
+
+    # leads to an image with four channels instead of three; fourth channel is only 255 though
+    current_image_tensor = torch.tensor(img_np[:, :, :-1])
+
     # resetting the clicks
     clicks.clear()
+
     return current_image
 
 # TODO: move the whole click logic into the backend
@@ -70,7 +91,7 @@ async def update_image(imageBase64: ImageBase64):
 async def add_clicks(click: Click):
     print(f"received new click at {click.x} and {click.y} of type {click.typeOfClick}")
     clicks.append(click)
-    compute_mask(current_image, clicks, mask, predictor)
+    compute_mask(current_image_tensor, clicks, mask, predictor)
     return clicks, pred_mask
 
 

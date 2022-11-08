@@ -8,26 +8,14 @@ import is_segformer_model
 sys.path.append(os.path.relpath("../FocalClick/models/focalclick"))
 import hrnet18s_S1_cclvs
 
-import base64
-# import cv2
 import numpy as np
 import torch
-import io
-from PIL import Image
 
 def compute_mask(image, clicks, prev_mask, predictor,
                     pred_thr=0.49
                     ):
 
     progressive_mode = True
-
-    # adapted from https://stackoverflow.com/questions/57318892/convert-base64-encoded-image-to-a-numpy-array
-    decoded_img = base64.b64decode(image)
-    decoded_img = Image.open(io.BytesIO(decoded_img))
-    img_np = np.array(decoded_img, dtype = np.uint8)
-    # leads to an image with four channels instead of three; fourth channel is only 255 though
-    img_torch = torch.tensor(img_np[:, :, :-1])
-
 
     # prev_mask:
     # 
