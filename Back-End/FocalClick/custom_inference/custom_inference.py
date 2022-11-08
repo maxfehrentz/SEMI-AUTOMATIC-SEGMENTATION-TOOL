@@ -7,6 +7,8 @@ sys.path.append(os.path.relpath("../FocalClick/isegm/model"))
 import is_segformer_model
 sys.path.append(os.path.relpath("../FocalClick/models/focalclick"))
 import hrnet18s_S1_cclvs
+sys.path.append(os.path.relpath("../FocalClick/isegm/inference"))
+from clicker import Click
 
 import numpy as np
 import torch
@@ -15,27 +17,36 @@ def compute_mask(image, clicks, prev_mask, predictor,
                     pred_thr=0.49
                     ):
 
+    # converting the clicks to the Click class used in FocalClick; difference in purpose
+    # as we might need more than one type of clicks and they only allow bool classification
+    click_list = []
+    for click in clicks:
+        if click.typeOfClick == "positive":
+            # note: they use y as the first coordinate, not x!
+            new_click = Click(True, (click.y, click.x))
+        elif click.typeOfClick == "negative":
+            new_click = Click(False, (click.y, click.x))
+        else:
+            raise RuntimeError("type of click is unknown")
+        click_list.append(new_click)
+
     progressive_mode = True
 
-    # prev_mask:
-    # 
-
-    # TODO: figure out a way to do this; probably just np.array filled with zeros of the same dimension as the image
-    pred_mask = np.zeros_like(gt_mask)
-
-    if prev_mask is None:
-        prev_mask = pred_mask
-
     with torch.no_grad():
+        # preparing the predictor
         predictor.set_input_image(image)
-        predictor.set_prev_mask(init_mask)
-            
+        if prev_mask is not None:
+            predictor.set_prev_mask(prev_mask)
+
         # TODO: adapt code in get_prediction
-        pred_probs = predictor.get_prediction(clicks)
+        pred_probs = predictor.get_prediction(click_list)
         pred_mask = pred_probs > pred_thr
+
+        # TODO: check if it makes sense to activate this form the start, in the paper it was from
+        # something around 10 onwards
         if progressive_mode:
             last_click = clicks[-1]
-            last_x, last_y = last_click.coords[0], last_click.coords[1]
+            last_x, last_y = last_click.x, last_click.y
             pred_mask = Progressive_Merge(pred_mask, prev_mask, last_y, last_x)
             predictor.transforms[0]._prev_probs = np.expand_dims(np.expand_dims(pred_mask,0),0)
             # if callback is not None:

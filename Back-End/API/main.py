@@ -6,6 +6,7 @@ import torch
 import base64
 import io
 from PIL import Image
+import numpy as np
 
 import sys
 import os
@@ -21,6 +22,8 @@ from focalclick import FocalPredictor
 class ImageBase64(BaseModel):
     content: bytes
 
+# making an enum instead of using bool because later we might have automatically generated clicks
+# and it might be necessary to indicate that, e.g. with "artif_pos"
 class ClickType(str, Enum):
     positive = "positive"
     negative = "negative"
@@ -32,15 +35,14 @@ class Click(BaseModel):
 
 app = FastAPI()
 
-# in base64 format
+# as np array
 global current_image
 current_image = ""
 
-# as Pytorch tensor
-global current_image_tensor
-current_image_tensor = None
-
+# TODO: in ? format
+global mask
 mask = None
+
 clicks = []
 device = torch.device('cpu')
 path_to_model = "../FocalClick/models/focalclick/hrnet18s_S1_cclvs.pth"
@@ -61,37 +63,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/")
-async def root():
-    print("root accessed")
-    return "Hi AIRLab"
-
 @app.put("/image")
 async def update_image(imageBase64: ImageBase64):
     global current_image
-    global current_image_tensor
-
-    current_image = imageBase64.content
+    global mask
 
     # adapted from https://stackoverflow.com/questions/57318892/convert-base64-encoded-image-to-a-numpy-array
-    decoded_img = base64.b64decode(current_image)
+    decoded_img = base64.b64decode(imageBase64.content)
     decoded_img = Image.open(io.BytesIO(decoded_img))
-    img_np = np.array(decoded_img, dtype = np.uint8)
-
-    # leads to an image with four channels instead of three; fourth channel is only 255 though
-    current_image_tensor = torch.tensor(img_np[:, :, :-1])
+    current_image = np.array(decoded_img, dtype = np.uint8)
 
     # resetting the clicks
     clicks.clear()
 
-    return current_image
+    # resetting the mask
+    mask = None
 
-# TODO: move the whole click logic into the backend
+    # TODO: figure out what the best practice is for returning stuff
+    return imageBase64.content
+
+# TODO: move the whole click logic into the backend; figure out best practices to
+# add and delete info
 @app.post("/clicks/")
 async def add_clicks(click: Click):
     print(f"received new click at {click.x} and {click.y} of type {click.typeOfClick}")
     clicks.append(click)
-    compute_mask(current_image_tensor, clicks, mask, predictor)
+    pred_mask = compute_mask(current_image, clicks, mask, predictor)
     return clicks, pred_mask
 
 
