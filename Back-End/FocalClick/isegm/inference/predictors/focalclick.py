@@ -1,6 +1,8 @@
 import torch
 import torch.nn.functional as F
 from torchvision import transforms
+import numpy as np
+import cv2
 
 import sys
 import os
@@ -59,7 +61,7 @@ class FocalPredictor(object):
         self.prev_prediction = torch.zeros_like(self.original_image[:, :1, :, :])
 
     def set_prev_mask(self, mask):
-        self.prev_prediction = torch.from_numpy(mask).unsqueeze(0).unsqueeze(0).to(self.device).float()
+        self.prev_prediction = mask.unsqueeze(0).unsqueeze(0).to(self.device).float()
 
     def get_prediction(self, clicks, prev_mask=None):
         click = clicks[-1]
@@ -72,7 +74,8 @@ class FocalPredictor(object):
         if self.net.with_prev_mask:
             input_image = torch.cat((input_image, prev_mask), dim=1)
 
-        image_nd, clicks, is_image_changed = self.apply_transforms(
+
+        image_nd, transformed_clicks, is_image_changed = self.apply_transforms(
             input_image, [clicks]
         )
 
@@ -85,7 +88,7 @@ class FocalPredictor(object):
             global_roi = (0,h,0,w)            
         self.global_roi = global_roi
     
-        pred_logits, feature= self._get_prediction(image_nd, clicks, is_image_changed)
+        pred_logits, feature= self._get_prediction(image_nd, transformed_clicks, is_image_changed)
         prediction = F.interpolate(pred_logits, mode='bilinear', align_corners=True,
                                    size=image_nd.size()[2:])
                          
@@ -100,7 +103,6 @@ class FocalPredictor(object):
         prediction  = torch.log( prediction/(1-prediction)  )
         coarse_mask = prediction
         prev_mask = prev_mask
-        clicks_list = clicker.get_clicks()
         image_full = self.original_image
         
         coarse_mask_np = coarse_mask.cpu().numpy()[0, 0] 
@@ -117,16 +119,21 @@ class FocalPredictor(object):
         focus_roi = (y1,y2,x1,x2)
         self.focus_roi = focus_roi
         focus_roi_in_global_roi = self.mapp_roi(focus_roi, global_roi)
-        focus_pred = self._get_refine(pred_logits,image_full,clicks_list, feature, focus_roi, focus_roi_in_global_roi)#.cpu().numpy()[0, 0]
+        focus_pred = self._get_refine(pred_logits,image_full, clicks, feature, focus_roi, focus_roi_in_global_roi)#.cpu().numpy()[0, 0]
         focus_pred = F.interpolate(focus_pred,(y2-y1,x2-x1),mode='bilinear',align_corners=True)#.cpu().numpy()[0, 0]
         
-        if len(clicks_list) > 10:
+        # only after 10 clicks the focus prediction is merged with the PREVIOUS mask, otherwise, the focus predictino is merged with the coarse
+        # prediction from before, therefore allowing global change
+        # TODO: EXPERIMENT WITH THIS ON GRAPES AND ADJUST
+        if len(clicks) > 10:
             coarse_mask = self.prev_prediction
             coarse_mask  = torch.log( coarse_mask/(1-coarse_mask)  )
         coarse_mask[:,:,y1:y2,x1:x2] =  focus_pred
         coarse_mask = torch.sigmoid(coarse_mask)
         
-        self.prev_prediction = coarse_mask
+        # TODO: might have to change this later but for now, all the previous mask setting should be done from outside, don't want this file
+        # to hold its own state and introduce a second source of truth
+        # self.prev_prediction = coarse_mask
         self.transforms[0]._prev_probs = coarse_mask.cpu().numpy()
         return coarse_mask.cpu().numpy()[0, 0]
 
@@ -185,7 +192,6 @@ class FocalPredictor(object):
 
         return image_nd, clicks_lists, is_image_changed
 
-    # TODO: no idea what they are doing here
     def get_points_nd(self, clicks_lists):
         total_clicks = []
         num_pos_clicks = [sum(x.is_positive for x in clicks_list) for clicks_list in clicks_lists]
@@ -203,8 +209,6 @@ class FocalPredictor(object):
             neg_clicks = [click.coords_and_indx for click in clicks_list if not click.is_positive]
             neg_clicks = neg_clicks + (num_max_points - len(neg_clicks)) * [(-1, -1, -1)]
             total_clicks.append(pos_clicks + neg_clicks)
-        # TODO: type of this is the problem; apparently the None should not occurr
-        print(f"total_clicks: {total_clicks}")
         return torch.tensor(total_clicks, device=self.device)
 
     def get_points_nd_inbbox(self, clicks_list, y1,y2,x1,x2):
@@ -226,6 +230,19 @@ class FocalPredictor(object):
         neg_clicks = neg_clicks + (num_max_points - len(neg_clicks)) * [(-1, -1, -1)]
         total_clicks.append(pos_clicks + neg_clicks)
         return torch.tensor(total_clicks, device=self.device)
+
+
+    def progressive_merge(self, pred_mask, y, x):
+        diff_regions = np.logical_xor(self.prev_prediction[0][0], pred_mask)
+        diff_regions = diff_regions.numpy()
+        num, labels = cv2.connectedComponents(diff_regions.astype(np.uint8))
+        label = labels[y,x]
+        corr_mask = labels == label
+        if self.prev_prediction[0][0][y,x] == 1:
+            progressive_mask = np.logical_and(self.prev_prediction[0][0], np.logical_not(corr_mask))
+        else:
+            progressive_mask = np.logical_or(self.prev_prediction[0][0], corr_mask)
+        return progressive_mask
 
 
         

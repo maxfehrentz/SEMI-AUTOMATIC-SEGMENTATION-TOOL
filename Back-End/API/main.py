@@ -72,6 +72,7 @@ async def update_image(imageBase64: ImageBase64):
     decoded_img = base64.b64decode(imageBase64.content)
     decoded_img = Image.open(io.BytesIO(decoded_img))
     current_image = np.array(decoded_img, dtype = np.uint8)
+    current_image = current_image[:, :, :-1]
 
     # resetting the clicks
     clicks.clear()
@@ -83,13 +84,14 @@ async def update_image(imageBase64: ImageBase64):
     return imageBase64.content
 
 # TODO: move the whole click logic into the backend; figure out best practices to
-# add and delete info
+# add/delete/reset clicks
 @app.post("/clicks/")
 async def add_clicks(click: Click):
-    print(f"received new click at {click.x} and {click.y} of type {click.typeOfClick}")
+    global mask
+
     clicks.append(click)
-    pred_mask = compute_mask(current_image, clicks, mask, predictor)
-    return clicks, pred_mask
+    mask = compute_mask(current_image, clicks, mask, predictor)
+    return clicks, mask
 
 
 
