@@ -7,6 +7,7 @@ import base64
 import io
 from PIL import Image
 import numpy as np
+import cv2
 
 import sys
 import os
@@ -80,8 +81,7 @@ async def update_image(imageBase64: ImageBase64):
     # resetting the mask
     mask = None
 
-    # TODO: figure out what the best practice is for returning stuff
-    return imageBase64.content
+    return
 
 # TODO: move the whole click logic into the backend; figure out best practices to
 # add/delete/reset clicks
@@ -91,7 +91,19 @@ async def add_clicks(click: Click):
 
     clicks.append(click)
     mask = compute_mask(current_image, clicks, mask, predictor)
-    return clicks, mask
+
+    # saving the mask as an image and providing the front-end with a URL to load it from
+    mask_np = mask.numpy()
+    zero_matrix = np.zeros_like(mask_np)
+    mask_np = np.stack([zero_matrix, zero_matrix, mask_np], axis = -1)
+    print(f"shape of mask_np: {mask_np.shape}")
+
+    # TODO: have an alpha channel to make the area with 255 more transparent and the areas with 0 completely transparent
+    cv2.imwrite("current_mask.png", mask_np * 255)
+
+
+    # TODO: later, clicks will have to be returned here so that all the logic is contained in the backend
+    return
 
 
 

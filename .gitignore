@@ -4,6 +4,9 @@ env/
 # VSCode
 .vscode/
 
+# exlude all images
+current_mask.png
+
 # node modules (can be installed based on package.json via npm install)
 node_modules/
 

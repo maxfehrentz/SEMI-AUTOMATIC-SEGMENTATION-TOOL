@@ -128,6 +128,10 @@ export default function Canvas() {
                 axios.post(
                     `http://localhost:8000/clicks/`, 
                     pointJson
+                ).then(
+                    response => {
+                        console.log(response)
+                    }
                 );
                 setPoints(prevPoints => {
                     return [...prevPoints, {x: x_relative_to_image, y: y_relative_to_image, typeOfClick:typeOfClick}];
