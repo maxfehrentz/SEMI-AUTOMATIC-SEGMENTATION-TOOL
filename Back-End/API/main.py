@@ -95,11 +95,13 @@ async def add_clicks(click: Click):
     # saving the mask as an image and providing the front-end with a URL to load it from
     mask_np = mask.numpy()
     zero_matrix = np.zeros_like(mask_np)
-    mask_np = np.stack([zero_matrix, zero_matrix, mask_np], axis = -1)
-    print(f"shape of mask_np: {mask_np.shape}")
 
-    # TODO: have an alpha channel to make the area with 255 more transparent and the areas with 0 completely transparent
-    cv2.imwrite("current_mask.png", mask_np * 255)
+    # adding transparency channel derived from the mask to make the red area more transparent and the rest fully transparent
+    full_image = cv2.merge((zero_matrix, zero_matrix, mask_np * 255, mask_np * 127))
+
+    # save the full_image
+    abs_img_path = "/Users/max/Documents/Studium/Semester7/Thesis/Semi_automatic_segmentation_tool/Back-End/API/current_mask.png"
+    cv2.imwrite(abs_img_path, full_image)
 
 
     # TODO: later, clicks will have to be returned here so that all the logic is contained in the backend

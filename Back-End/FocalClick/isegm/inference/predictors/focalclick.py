@@ -124,8 +124,8 @@ class FocalPredictor(object):
         
         # only after 10 clicks the focus prediction is merged with the PREVIOUS mask, otherwise, the focus predictino is merged with the coarse
         # prediction from before, therefore allowing global change
-        # TODO: EXPERIMENT WITH THIS ON GRAPES AND ADJUST
-        if len(clicks) > 10:
+        # TODO: EXPERIMENT WITH THIS ON GRAPES AND ADJUST; default was 10
+        if len(clicks) > 5:
             coarse_mask = self.prev_prediction
             coarse_mask  = torch.log( coarse_mask/(1-coarse_mask)  )
         coarse_mask[:,:,y1:y2,x1:x2] =  focus_pred
