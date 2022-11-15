@@ -46,8 +46,12 @@ mask = None
 
 clicks = []
 device = torch.device('cpu')
-path_to_model = "../FocalClick/models/focalclick/hrnet18s_S1_cclvs.pth"
+
+# TODO: include instruction in the Readme where to find and download the model
+# path_to_model = "../FocalClick/models/focalclick/hrnet18s_S1_cclvs.pth"
+path_to_model = "../FocalClick/models/focalclick/segformerB3_S2_comb.pth"
 net = load_is_model(path_to_model, device)
+
 predictor = FocalPredictor(net, device)
 
 origins = [

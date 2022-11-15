@@ -18,12 +18,13 @@ export default function Canvas() {
     // state to track the list of points
     const [points, setPoints] = useState([]);
 
-    // state to track the current image
+    // state to track the current image and by which factor it was scaled
    const [currentImage, setCurrentImage] = useState(null);
+   const currentScale = useRef(null);
 
    // offsets in x and y direction to center the image in the window
-   const centerShift_x = useRef(null);
-   const centerShift_y = useRef(null);
+   const centerShiftX = useRef(null);
+   const centerShiftY = useRef(null);
 
 
 	useEffect(() => {
@@ -75,33 +76,34 @@ export default function Canvas() {
         if (!currentImage) {
             return;
         }
-        // TODO: scale the image to make it fill the screen as much as possible
-        console.log("drawing the new image")
         let canvas = canvasRef1.current;
         let ctx = ctxRef1.current;
 
-        console.log(`width: ${currentImage.width}, height: ${currentImage.height}`)
+        // scaling adapted from https://stackoverflow.com/questions/10841532/canvas-drawimage-scaling
+        var naturalWidth = currentImage.naturalWidth;
+        var naturalHeight = currentImage.naturalHeight;
+        var imgWidth = naturalWidth;
+        var screenWidth  = canvas.width / 2;
+        var scaleX = 1;
+        scaleX = screenWidth/imgWidth;
+        var imgHeight = naturalHeight;
+        var screenHeight = canvas.height / 2;
+        var scaleY = 1;
+        scaleY = screenHeight/imgHeight;
+        var scale = scaleY;
+        if(scaleX < scaleY)
+            scale = scaleX;
 
-        // TODO: figure out if I need to scale or not
-        // need to divide by two in the end because the whole context was scaled by 2
-        centerShift_x.current = ((canvas.width / 2) - currentImage.width) / 2;
-        centerShift_y.current = ((canvas.height / 2) - currentImage.height) / 2;
-        ctx.drawImage(currentImage, centerShift_x.current, centerShift_y.current);
+        currentScale.current = scale;
+            
+        imgHeight = imgHeight*scale;
+        imgWidth = imgWidth*scale;
 
-        // // unscaled version with center shift
-        // var centerShift_x = ((canvas.width / 2) - image.width);
-        // var centerShift_y = ((canvas.height / 2) - image.height);
-        // ctx.drawImage(image, centerShift_x, centerShift_y);
+        // need to divide by two in the end because the whole canvas was scaled by 2
+        centerShiftX.current = ((canvas.width / 2) - imgWidth) / 2;
+        centerShiftY.current = ((canvas.height / 2) - imgHeight) / 2;
+        ctx.drawImage(currentImage, 0, 0, naturalWidth, naturalHeight, centerShiftX.current, centerShiftY.current, imgWidth, imgHeight);
 
-        // // unscaled version without center shift
-        // ctx.drawImage(image, 0, 0);
-
-        // // resizing canvas2, the upper canvas, so it only works on the image
-        // let ctx2 = ctxRef1.current;
-        // ctx2.canvas.width = image.width;
-        // ctx2.canvas.height = image.height;
-        // ctx2.canvas.style.top = centerShift_y;
-        // ctx2.canvas.style.left = centerShift_x;
     }, [currentImage])
 
     const addPositivePoint = ({nativeEvent}) => {
@@ -112,19 +114,40 @@ export default function Canvas() {
     const addNegativePoint = ({nativeEvent}) => {
         // TODO: same as for positive point
         addPoint({nativeEvent}, "negative")
-        return false;
     }
 
     const addPoint = ({nativeEvent}, typeOfClick) => {
-        // extracting X and Y of the point and adding it to the list
-        const { offsetX, offsetY } = nativeEvent;
-        let x_relative_to_image = offsetX - centerShift_x.current;
-        let y_relative_to_image = offsetY - centerShift_y.current;
-        if (x_relative_to_image < currentImage.width && x_relative_to_image >= 0) {
-            if (y_relative_to_image < currentImage.height && y_relative_to_image >= 0) {
-                // point has been placed within the image and needs to be rendered on the frontend and send to the backend
-                // using the relative coordinate to the image because that's what focal click needs
-                const pointJson = {x: x_relative_to_image, y: y_relative_to_image, typeOfClick: typeOfClick};
+        // extracting X and Y of the point
+        const { x, y } = nativeEvent;
+
+        /* a CSS stylesheet is used that changes the size of the canvas (Canvas.css) -> code in here is not
+        aware of that -> takes coordinates as if the canvas size has not been changed by the stylesheet
+        -> wrong coordinates; e.g. placing a click on the bottom of the canvas leads to the click 
+        being localized much further up because the canvas was "squished" by the stylesheet;
+        therefore, a translation relative to the actual box of the rendered canvas is necessary
+        adapted from https://stackoverflow.com/questions/57910824/js-using-wrong-coordinates-when-drawing-on-canvas-with-margin
+        */
+        const canvas2 = canvasRef2.current;
+        const rect = canvas2.getBoundingClientRect();
+        // the height is divided by two because the canvas was scaled in the beginning by 2
+        const factor = (canvas2.height / 2) / rect.height;
+        const translatedY = factor * y;
+
+        // TODO: change this to camel case
+        let xRelativeToScaledImage = x - centerShiftX.current;
+        /* see the corresponding CSS file: canvas1 with the image is restricted to 90% of the height now,
+        while canvas2 is not and extends beyond the buttons because restricting canvas2 leads to a weird bug,
+        painting the clicks where they were made leads to the points painted in a lower y position */
+        let yRelativeToScaledImage = translatedY - centerShiftY.current;
+        if (xRelativeToScaledImage < currentImage.naturalWidth * currentScale.current && xRelativeToScaledImage >= 0) {
+            if (yRelativeToScaledImage < currentImage.naturalHeight * currentScale.current && yRelativeToScaledImage >= 0) {
+                // sending the points relative to the UNSCALED image to the backend; scaling the image in the front-end is only for convenience;
+                // the backend is oblivious to how the front-end displays the image
+                const pointJson = {
+                    x: xRelativeToScaledImage / currentScale.current, 
+                    y: yRelativeToScaledImage / currentScale.current, 
+                    typeOfClick: typeOfClick
+                };
                 axios.post(
                     `http://localhost:8000/clicks/`, 
                     pointJson
@@ -133,8 +156,9 @@ export default function Canvas() {
                         console.log(response)
                     }
                 );
+                // saving the point to the list to be displayed
                 setPoints(prevPoints => {
-                    return [...prevPoints, {x: x_relative_to_image, y: y_relative_to_image, typeOfClick:typeOfClick}];
+                    return [...prevPoints, {x: x, y: translatedY, typeOfClick:typeOfClick}];
                 })
         
             }
@@ -160,11 +184,10 @@ export default function Canvas() {
     }
 
 	const drawPoint = ({x, y, typeOfClick}) => {
-        console.log(`drawing a point at ${x}, ${y} relative to the image`)
         ctxRef2.current.beginPath();
-        /* x and y are relative to the upper left corner of the image, drawing however is relative to
-        the full screen, therefore the center shifts need to be added*/
-        ctxRef2.current.arc(x + centerShift_x.current, y + centerShift_y.current, 4, 0, 2 * Math.PI);
+        /* x and y are relative to the upper left corner of the unscaled image, drawing however is relative to
+        the full screen and the scaled image, therefore the center shifts need to be added*/
+        ctxRef2.current.arc(x, y, 4, 0, 2 * Math.PI);
         if (typeOfClick === "positive") {
             ctxRef2.current.fillStyle = "#AAFF00";
         }

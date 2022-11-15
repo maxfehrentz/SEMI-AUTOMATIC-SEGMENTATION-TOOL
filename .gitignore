@@ -10,6 +10,9 @@ current_mask.png
 # node modules (can be installed based on package.json via npm install)
 node_modules/
 
+# exclude the large model
+segformerB3_S2_comb.pth
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
