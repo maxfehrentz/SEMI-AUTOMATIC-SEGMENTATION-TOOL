@@ -103,13 +103,15 @@ async def add_clicks(click: Click):
     # adding transparency channel derived from the mask to make the red area more transparent and the rest fully transparent
     full_image = cv2.merge((zero_matrix, zero_matrix, mask_np * 255, mask_np * 127))
 
-    # save the full_image
+    # save the full_image TODO: might be deleted later
     abs_img_path = "/Users/max/Documents/Studium/Semester7/Thesis/Semi_automatic_segmentation_tool/Back-End/API/current_mask.png"
     cv2.imwrite(abs_img_path, full_image)
+    with open(abs_img_path, "rb") as image_file:
+        encoded_image = base64.b64encode(image_file.read())
 
+    # return the base64-encoded png to the front-end
+    return encoded_image
 
-    # TODO: later, clicks will have to be returned here so that all the logic is contained in the backend
-    return
 
 
 

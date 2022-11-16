@@ -1,11 +1,16 @@
-// taken from https://github.com/IsaacThaJunior/react-and-canvas-api/blob/main/src/Drawing.js
-
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import './Canvas.css';
 import axios from 'axios';
 
-// TODO: connect point logic with the backend (removing previous point, removing all points)
+class ImageType {
+    // Create new instances of the same class as static attributes
+    static ImageToBeAnnotated = new ImageType("imageToBeAnnotated")
+    static Mask = new ImageType("mask")
 
+    constructor(name) {
+      this.name = name
+    }
+  }
 
 export default function Canvas() {
     const canvasRef1 = useRef(null);
@@ -21,6 +26,9 @@ export default function Canvas() {
     // state to track the current image and by which factor it was scaled
    const [currentImage, setCurrentImage] = useState(null);
    const currentScale = useRef(null);
+
+   // state to track the current mask; scale will be the same, if not there will be an exception
+   const [currentMask, setCurrentMask] = useState(null);
 
    // offsets in x and y direction to center the image in the window
    const centerShiftX = useRef(null);
@@ -72,16 +80,35 @@ export default function Canvas() {
         }
       }, [points])
 
-    useEffect(() => {
-        if (!currentImage) {
-            return;
+    /* 
+    can read up here https://www.knowledgehut.com/blog/web-development/all-about-react-usecallback
+    why useCallback is necessary; basically: the useEffect hooks that need this function obviously
+    have a dependency on it; however, functions get recreated at every rerender -> each rerender of
+    the component would change this function and trigger the useEffect hook unitentionally
+    -> useCallback makes sure that this function only gets recreated when one of its dependencies changes
+    */
+    const drawImageOnCanvas = useCallback((imageType) => {
+        var canvas = null;
+        var ctx = null;
+        var imageToBeDrawn = null;
+        if (imageType === ImageType.ImageToBeAnnotated) {
+            canvas = canvasRef1.current;
+            ctx = ctxRef1.current;
+            imageToBeDrawn = currentImage;
         }
-        let canvas = canvasRef1.current;
-        let ctx = ctxRef1.current;
+        else if (imageType === ImageType.Mask) {
+            console.log("need to draw a mask");
+            canvas = canvasRef2.current;
+            ctx = ctxRef2.current;
+            imageToBeDrawn = currentMask;
+        }
+        else {
+            throw new Error("imageType is invalid!");
+        }
 
         // scaling adapted from https://stackoverflow.com/questions/10841532/canvas-drawimage-scaling
-        var naturalWidth = currentImage.naturalWidth;
-        var naturalHeight = currentImage.naturalHeight;
+        var naturalWidth = imageToBeDrawn.naturalWidth;
+        var naturalHeight = imageToBeDrawn.naturalHeight;
         var imgWidth = naturalWidth;
         var screenWidth  = canvas.width / 2;
         var scaleX = 1;
@@ -93,18 +120,34 @@ export default function Canvas() {
         var scale = scaleY;
         if(scaleX < scaleY)
             scale = scaleX;
-
         currentScale.current = scale;
-            
+
         imgHeight = imgHeight*scale;
         imgWidth = imgWidth*scale;
-
         // need to divide by two in the end because the whole canvas was scaled by 2
         centerShiftX.current = ((canvas.width / 2) - imgWidth) / 2;
         centerShiftY.current = ((canvas.height / 2) - imgHeight) / 2;
-        ctx.drawImage(currentImage, 0, 0, naturalWidth, naturalHeight, centerShiftX.current, centerShiftY.current, imgWidth, imgHeight);
+        console.log("about to draw a mask")
+        ctx.drawImage(imageToBeDrawn, 0, 0, naturalWidth, naturalHeight, centerShiftX.current, centerShiftY.current, imgWidth, imgHeight);
 
-    }, [currentImage])
+    }, [currentImage, currentMask])
+
+    useEffect(() => {
+        if (!currentImage) {
+            return;
+        }
+        drawImageOnCanvas(ImageType.ImageToBeAnnotated)
+    }, [currentImage, drawImageOnCanvas])
+
+
+    useEffect(() => {
+        console.log(`useEffect triggered`)
+        if (!currentMask) {
+            return;
+        }
+        drawImageOnCanvas(ImageType.Mask)
+    }, [currentMask, drawImageOnCanvas])
+
 
     const addPositivePoint = ({nativeEvent}) => {
         // TODO: solve this with an enum, not strings
@@ -153,7 +196,17 @@ export default function Canvas() {
                     pointJson
                 ).then(
                     response => {
+                        // expecting the mask in base64 format
                         console.log(response)
+                        const currentMask = new Image();
+                        console.log("created new Image")
+                        currentMask.onload = function() {
+                            console.log("setting current mask")
+                            setCurrentMask(currentMask);
+                        }
+                        // need to prepend this so HTML knows how to deal with the base64 encoding
+                        currentMask.src = "data:image/png;base64," + response.data;
+                        console.log("set the mask src")
                     }
                 );
                 // saving the point to the list to be displayed
@@ -237,8 +290,8 @@ export default function Canvas() {
         // setting the image when loaded and sending it to the backend
         reader.addEventListener("load", function () {
             image.src = reader.result;
-            console.log(`encoded image: ${reader.result.split(',')[1]}`)
-            // reader.result contains the image in Base64 format; wrapping it in JSON to send it to the backend
+            /* reader.result contains the image in Base64 format; removing some additional info and wrapping it in 
+            JSON to send it to the backend */
             const imageJson = {content: reader.result.split(',')[1]};
             axios.put("http://localhost:8000/image", imageJson);
             setCurrentImage(image);
