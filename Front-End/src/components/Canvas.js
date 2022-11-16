@@ -87,66 +87,103 @@ export default function Canvas() {
     the component would change this function and trigger the useEffect hook unitentionally
     -> useCallback makes sure that this function only gets recreated when one of its dependencies changes
     */
-    const drawImageOnCanvas = useCallback((imageType) => {
-        var canvas = null;
-        var ctx = null;
-        var imageToBeDrawn = null;
-        if (imageType === ImageType.ImageToBeAnnotated) {
-            canvas = canvasRef1.current;
-            ctx = ctxRef1.current;
-            imageToBeDrawn = currentImage;
-        }
-        else if (imageType === ImageType.Mask) {
-            console.log("need to draw a mask");
-            canvas = canvasRef2.current;
-            ctx = ctxRef2.current;
-            imageToBeDrawn = currentMask;
-        }
-        else {
-            throw new Error("imageType is invalid!");
-        }
+    // const drawImageOnCanvas = useCallback((imageType) => {
+    //     var canvas = null;
+    //     var ctx = null;
+    //     var imageToBeDrawn = null;
+    //     if (imageType === ImageType.ImageToBeAnnotated) {
+    //         canvas = canvasRef1.current;
+    //         ctx = ctxRef1.current;
+    //         imageToBeDrawn = currentImage;
+    //     }
+    //     else if (imageType === ImageType.Mask) {
+    //         canvas = canvasRef2.current;
+    //         ctx = ctxRef2.current;
+    //         imageToBeDrawn = currentMask;
+    //     }
+    //     else {
+    //         throw new Error("imageType is invalid!");
+    //     }
 
-        // scaling adapted from https://stackoverflow.com/questions/10841532/canvas-drawimage-scaling
-        var naturalWidth = imageToBeDrawn.naturalWidth;
-        var naturalHeight = imageToBeDrawn.naturalHeight;
-        var imgWidth = naturalWidth;
-        var screenWidth  = canvas.width / 2;
-        var scaleX = 1;
-        scaleX = screenWidth/imgWidth;
-        var imgHeight = naturalHeight;
-        var screenHeight = canvas.height / 2;
-        var scaleY = 1;
-        scaleY = screenHeight/imgHeight;
-        var scale = scaleY;
-        if(scaleX < scaleY)
-            scale = scaleX;
-        currentScale.current = scale;
+    //     // scaling adapted from https://stackoverflow.com/questions/10841532/canvas-drawimage-scaling
+    //     var naturalWidth = imageToBeDrawn.naturalWidth;
+    //     var naturalHeight = imageToBeDrawn.naturalHeight;
+    //     var imgWidth = naturalWidth;
+    //     var screenWidth  = canvas.width / 2;
+    //     var scaleX = 1;
+    //     scaleX = screenWidth/imgWidth;
+    //     var imgHeight = naturalHeight;
+    //     var screenHeight = canvas.height / 2;
+    //     var scaleY = 1;
+    //     scaleY = screenHeight/imgHeight;
+    //     var scale = scaleY;
+    //     if(scaleX < scaleY)
+    //         scale = scaleX;
+    //     currentScale.current = scale;
 
-        imgHeight = imgHeight*scale;
-        imgWidth = imgWidth*scale;
-        // need to divide by two in the end because the whole canvas was scaled by 2
-        centerShiftX.current = ((canvas.width / 2) - imgWidth) / 2;
-        centerShiftY.current = ((canvas.height / 2) - imgHeight) / 2;
-        console.log("about to draw a mask")
-        ctx.drawImage(imageToBeDrawn, 0, 0, naturalWidth, naturalHeight, centerShiftX.current, centerShiftY.current, imgWidth, imgHeight);
+    //     imgHeight = imgHeight*scale;
+    //     imgWidth = imgWidth*scale;
+    //     // need to divide by two in the end because the whole canvas was scaled by 2
+    //     centerShiftX.current = ((canvas.width / 2) - imgWidth) / 2;
+    //     centerShiftY.current = ((canvas.height / 2) - imgHeight) / 2;
+    //     ctx.drawImage(imageToBeDrawn, 0, 0, naturalWidth, naturalHeight, centerShiftX.current, centerShiftY.current, imgWidth, imgHeight);
 
-    }, [currentImage, currentMask])
+    // }, [currentImage, currentMask])
 
     useEffect(() => {
-        if (!currentImage) {
-            return;
-        }
-        drawImageOnCanvas(ImageType.ImageToBeAnnotated)
-    }, [currentImage, drawImageOnCanvas])
+        // first, notify the backend to also reset the mask
+        axios.post(
+            `http://localhost:8000/reset/`        
+        ).then(() => {
+            if (!currentImage) {
+                return;
+            }
+            const canvas = canvasRef1.current;
+            const ctx = ctxRef1.current;
+    
+            // scaling adapted from https://stackoverflow.com/questions/10841532/canvas-drawimage-scaling
+            var naturalWidth = currentImage.naturalWidth;
+            var naturalHeight = currentImage.naturalHeight;
+            var imgWidth = naturalWidth;
+            var screenWidth  = canvas.width / 2;
+            var scaleX = 1;
+            scaleX = screenWidth/imgWidth;
+            var imgHeight = naturalHeight;
+            var screenHeight = canvas.height / 2;
+            var scaleY = 1;
+            scaleY = screenHeight/imgHeight;
+            var scale = scaleY;
+            if(scaleX < scaleY)
+                scale = scaleX;
+            currentScale.current = scale;
+    
+            imgHeight = imgHeight*scale;
+            imgWidth = imgWidth*scale;
+            // need to divide by two in the end because the whole canvas was scaled by 2
+            centerShiftX.current = ((canvas.width / 2) - imgWidth) / 2;
+            centerShiftY.current = ((canvas.height / 2) - imgHeight) / 2;
+            ctx.drawImage(currentImage, 0, 0, naturalWidth, naturalHeight, centerShiftX.current, centerShiftY.current, imgWidth, imgHeight);
+        })
+    }, [currentImage])
 
 
     useEffect(() => {
-        console.log(`useEffect triggered`)
         if (!currentMask) {
             return;
         }
-        drawImageOnCanvas(ImageType.Mask)
-    }, [currentMask, drawImageOnCanvas])
+        const ctx = ctxRef2.current;
+        ctx.drawImage(
+            currentMask, 
+            0, 
+            0, 
+            currentMask.naturalWidth, 
+            currentMask.naturalHeight, 
+            centerShiftX.current, 
+            centerShiftY.current, 
+            currentMask.naturalWidth * currentScale.current, 
+            currentMask.naturalHeight * currentScale.current
+        );
+    }, [currentMask])
 
 
     const addPositivePoint = ({nativeEvent}) => {
@@ -197,16 +234,12 @@ export default function Canvas() {
                 ).then(
                     response => {
                         // expecting the mask in base64 format
-                        console.log(response)
                         const currentMask = new Image();
-                        console.log("created new Image")
                         currentMask.onload = function() {
-                            console.log("setting current mask")
                             setCurrentMask(currentMask);
                         }
                         // need to prepend this so HTML knows how to deal with the base64 encoding
                         currentMask.src = "data:image/png;base64," + response.data;
-                        console.log("set the mask src")
                     }
                 );
                 // saving the point to the list to be displayed
@@ -225,8 +258,16 @@ export default function Canvas() {
     }
 
     const clearMaskAndPoints = () => {
-        setPoints(prevPoints => {
-            return [];
+        // first, notify the backend to reset the mask
+        axios.post(
+            `http://localhost:8000/reset/`        
+        ).then(() => {
+            setPoints(prevPoints => {
+                return [];
+            })
+            setCurrentMask(_ => {
+                return null;
+            })
         })
     }
 
@@ -255,7 +296,6 @@ export default function Canvas() {
 	};
 
 	const clearCanvas = () => {
-        console.log("clearing the screen")
 		ctxRef1.current.clearRect(
 			0,
 			0,
@@ -270,6 +310,12 @@ export default function Canvas() {
         );
         setPoints(prevPoints => {
             return [];
+        })
+        setCurrentImage(_ => {
+            return null;
+        })
+        setCurrentMask(_ => {
+            return null;
         })
     };
     

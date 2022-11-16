@@ -40,7 +40,7 @@ app = FastAPI()
 global current_image
 current_image = ""
 
-# TODO: in ? format
+# as pytorch tensor
 global mask
 mask = None
 
@@ -90,7 +90,7 @@ async def update_image(imageBase64: ImageBase64):
 # TODO: move the whole click logic into the backend; figure out best practices to
 # add/delete/reset clicks
 @app.post("/clicks/")
-async def add_clicks(click: Click):
+async def add_click(click: Click):
     global mask
 
     clicks.append(click)
@@ -112,7 +112,15 @@ async def add_clicks(click: Click):
     # return the base64-encoded png to the front-end
     return encoded_image
 
+# leaves the image but resets the clicks and the mask
+@app.post("/reset/")
+async def reset():
+    global mask
+    mask = None
 
+    clicks.clear()
+
+    return
 
 
 
