@@ -9,6 +9,9 @@ export default function Canvas() {
 	// later to draw on the canvas
     const ctxRef1 = useRef(null);
     const ctxRef2 = useRef(null);
+
+    // state to enable/disable the rollback button; we only allow to rollback one step
+    const [rollbackDisabled, setRollbackDisabled] = useState(false);
     
     // state to track the list of points
     const [points, setPoints] = useState([]);
@@ -48,8 +51,7 @@ export default function Canvas() {
 
     }, []);
 
-    // TODO: figure out how this works together with the scaling of context above; necessary for
-    // functionality but fucks up layout!
+
     const doubleScreenDensitiy = canvas => {
         // For supporting computers with higher screen densities, we double the screen density
 		canvas.width = window.innerWidth * 2;
@@ -157,7 +159,6 @@ export default function Canvas() {
         const factor = (canvas2.height / 2) / rect.height;
         const translatedY = factor * y;
 
-        // TODO: change this to camel case
         let xRelativeToScaledImage = x - centerShiftX.current;
         /* see the corresponding CSS file: canvas1 with the image is restricted to 90% of the height now,
         while canvas2 is not and extends beyond the buttons because restricting canvas2 leads to a weird bug,
@@ -181,6 +182,9 @@ export default function Canvas() {
                         const currentMask = new Image();
                         currentMask.onload = function() {
                             setCurrentMask(currentMask);
+                            if (rollbackDisabled) {
+                                setRollbackDisabled(false);
+                            }
                         }
                         // need to prepend this so HTML knows how to deal with the base64 encoding
                         currentMask.src = "data:image/png;base64," + response.data;
@@ -228,7 +232,7 @@ export default function Canvas() {
                         return prevPoints.slice(0, -1);
                     })
                     setCurrentMask(currentMask);
-                    // TODO: deactivate the button
+                    setRollbackDisabled(true);
                 }
                 // need to prepend this so HTML knows how to deal with the base64 encoding
                 currentMask.src = "data:image/png;base64," + response.data;
@@ -318,7 +322,7 @@ export default function Canvas() {
 	        <button className="button" onClick={clearMaskAndPoints}>
 	        	Start from scratch
 	        </button>
-            <button className="button" onClick={rollbackPrevClick}>
+            <button className="button" onClick={rollbackPrevClick} disabled={rollbackDisabled}>
 	        	Remove previous point
 	        </button>
             <button className="button" onClick={loadImage}>
