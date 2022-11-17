@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from enum import Enum
@@ -157,23 +157,36 @@ async def reset():
 
     return
 
-@app.post("/rollBackClick/")
+@app.get("/rollBackClick/")
 async def roll_back_click():
     global mask
 
-    # removing the last click
-    del clicks[-1]
-
     # retrieving the png of the previous mask
-    with open(path_to_prev_mask, "rb") as image_file:
-        encoded_image = base64.b64encode(image_file.read())
+    if os.path.isfile(path_to_prev_mask):
+        # removing the last click
+        del clicks[-1]
 
-    # setting the masks one step back and writing them to png files
-    mask = prev_mask
-    save_current_and_prev_mask()
+        # reading the previous mask
+        with open(path_to_prev_mask, "rb") as image_file:
+            encoded_image = base64.b64encode(image_file.read())
 
-    # return the base64-encoded png of the previous mask to the front-end
-    return encoded_image
+        # setting the masks one step back and writing them to png files
+        mask = prev_mask
+        save_current_and_prev_mask()
+
+        # return the base64-encoded png of the previous mask to the front-end
+        return encoded_image
+    
+    # in case there is no previous mask yet (e.g. after the first click there is only a current mask)
+    # the frontend will be notified
+    else:
+        raise HTTPException(status_code=404, detail="No previous mask available")
+
+
+
+    
+
+    
 
 
 

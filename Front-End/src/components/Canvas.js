@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { React, useEffect, useRef, useState } from 'react';
 import './Canvas.css';
 import axios from 'axios';
 
@@ -67,7 +67,11 @@ export default function Canvas() {
 			0,
 			canvasRef2.current.width,
 			canvasRef2.current.height
-		);
+        );
+        // avoids that the user can remove a click before even placing one
+        if(points.length === 0) {
+            setRollbackDisabled(true)
+        }
         for (const point of points) {
            drawPoint(point)
         }
@@ -220,24 +224,31 @@ export default function Canvas() {
     }
 
     const rollbackPrevClick = () => {
-        axios.post(
+        axios.get(
             `http://localhost:8000/rollBackClick/`        
-        ).then(
-            response => {
-                // expecting the previous mask in base64 format
-                const currentMask = new Image();
-                currentMask.onload = function() {
-                    // remove the last click
-                    setPoints(prevPoints => {
-                        return prevPoints.slice(0, -1);
-                    })
-                    setCurrentMask(currentMask);
-                    setRollbackDisabled(true);
-                }
-                // need to prepend this so HTML knows how to deal with the base64 encoding
-                currentMask.src = "data:image/png;base64," + response.data;
+        ).then(response => {
+            // expecting the previous mask in base64 format
+            const currentMask = new Image();
+            currentMask.onload = function() {
+                // remove the last click
+                setPoints(prevPoints => {
+                    return prevPoints.slice(0, -1);
+                })
+                setCurrentMask(currentMask);
+                setRollbackDisabled(true);
             }
-        );
+            // need to prepend this so HTML knows how to deal with the base64 encoding
+            currentMask.src = "data:image/png;base64," + response.data;
+        }).catch(error => {
+            if (error.response.status === 404) {
+                /* 
+                that means that the requested resource (previous mask) was not available
+                -> can happen if the user tries to rollback after the first click (no prev mask yet)
+                -> this case is equal in meaning to starting from scratch
+                */
+                clearMaskAndPoints()
+            }
+        });
     }
 
 	const drawPoint = ({x, y, typeOfClick}) => {
