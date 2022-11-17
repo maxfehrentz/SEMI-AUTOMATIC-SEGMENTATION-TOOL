@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import './Canvas.css';
 import axios from 'axios';
 
@@ -139,7 +139,7 @@ export default function Canvas() {
         addPoint({nativeEvent}, "negative")
     }
 
-    
+
     const addPoint = ({nativeEvent}, typeOfClick) => {
         // extracting X and Y of the point
         const { x, y } = nativeEvent;
@@ -215,10 +215,25 @@ export default function Canvas() {
         })
     }
 
-    const clearPrevPoint = () => {
-        setPoints(prevPoints => {
-            return prevPoints.slice(0, -1);
-        })
+    const rollbackPrevClick = () => {
+        axios.post(
+            `http://localhost:8000/rollBackClick/`        
+        ).then(
+            response => {
+                // expecting the previous mask in base64 format
+                const currentMask = new Image();
+                currentMask.onload = function() {
+                    // remove the last click
+                    setPoints(prevPoints => {
+                        return prevPoints.slice(0, -1);
+                    })
+                    setCurrentMask(currentMask);
+                    // TODO: deactivate the button
+                }
+                // need to prepend this so HTML knows how to deal with the base64 encoding
+                currentMask.src = "data:image/png;base64," + response.data;
+            }
+        );
     }
 
 	const drawPoint = ({x, y, typeOfClick}) => {
@@ -303,7 +318,7 @@ export default function Canvas() {
 	        <button className="button" onClick={clearMaskAndPoints}>
 	        	Start from scratch
 	        </button>
-            <button className="button" onClick={clearPrevPoint}>
+            <button className="button" onClick={rollbackPrevClick}>
 	        	Remove previous point
 	        </button>
             <button className="button" onClick={loadImage}>
