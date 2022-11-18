@@ -1,8 +1,8 @@
 import { React, useEffect, useRef, useState } from 'react';
-import './Canvas.css';
+import './SegmentationScreen.css';
 import axios from 'axios';
 
-export default function Canvas() {
+export default function SegmentationScreen() {
     const canvasRef1 = useRef(null);
     const canvasRef2 = useRef(null);
 	// Storing the context in a ref so we can use it
@@ -330,13 +330,13 @@ export default function Canvas() {
                     ref={canvasRef2}
 	        	/>
             </div>
-	        <button className="button" onClick={clearMaskAndPoints}>
+	        <button className="button_segmentation" onClick={clearMaskAndPoints}>
 	        	Start from scratch
 	        </button>
-            <button className="button" onClick={rollbackPrevClick} disabled={rollbackDisabled}>
+            <button className="button_segmentation" onClick={rollbackPrevClick} disabled={rollbackDisabled}>
 	        	Remove previous point
 	        </button>
-            <button className="button" onClick={loadImage}>
+            <button className="button_segmentation" onClick={loadImage}>
 	        	Load image
 	        </button>
         </div>
