@@ -16,9 +16,12 @@ export default function SegmentationScreen() {
     const ctxRef1 = useRef(null);
     const ctxRef2 = useRef(null);
 
-    // state to track the current image and by which factor it was scaled
+    // track the current image and by which factor it was scaled
    const [currentImage, setCurrentImage] = useState(null);
    const currentScale = useRef(null);
+
+   // track the bounding boxes
+   const [boundingBoxes, setBoundingBoxes] = useState([]);
 
    // offsets in x and y direction to center the image in the window
    const centerShiftX = useRef(null);
@@ -94,6 +97,20 @@ export default function SegmentationScreen() {
             ctx.drawImage(currentImage, 0, 0, naturalWidth, naturalHeight, centerShiftX.current, centerShiftY.current, imgWidth, imgHeight);
         // })
     }, [currentImage])
+
+
+    useEffect(() => {
+
+        clearCanvas2();
+
+        const ctx = ctxRef2.current;
+        ctx.strokeStyle = "red";
+
+        for (const boundingBox of boundingBoxes) {
+            const {x, y, width, height} = boundingBox;
+            ctx.strokeRect(x, y, width, height);
+        }
+    }, [boundingBoxes])
 
 
     // const addPoint = ({nativeEvent}, typeOfClick) => {
@@ -194,6 +211,9 @@ export default function SegmentationScreen() {
         setCurrentImage(_ => {
             return null;
         })
+        setBoundingBoxes(_ => {
+            return [];
+        })
     };
 
     const clearCanvas2 = () => {
@@ -240,11 +260,16 @@ export default function SegmentationScreen() {
             stopDrawingBox();
             isDrawing.current = false;
         }
-        else {
+        // only allow drawing if there is an image set
+        else if (currentImage) {
             isDrawing.current = true;
             const {x, y} = nativeEvent;
             originBoxX.current = x;
             originBoxY.current = y;
+            // create entry in the bounding box list
+            setBoundingBoxes(prevBoxes => {
+                return [...prevBoxes, {x: x, y: y, width: 0, height: 0}]
+            })
         }
     }
 
@@ -258,11 +283,12 @@ export default function SegmentationScreen() {
         if ((!originBoxX.current && !originBoxY.current) || !isDrawing.current) {
             return;
         }
-        clearCanvas2();
-        const ctx = ctxRef2.current;
         const {x, y} = nativeEvent;
-        ctx.strokeStyle = "red";
-        ctx.strokeRect(originBoxX.current, originBoxY.current, x - originBoxX.current, y - originBoxY.current);
+        setBoundingBoxes(prevBoxes => {
+            const newBoxes = prevBoxes.slice(0, -1);
+            newBoxes.push({x: originBoxX.current, y: originBoxY.current, width: x - originBoxX.current, height: y - originBoxY.current});
+            return newBoxes;
+        })
     })
 
 
