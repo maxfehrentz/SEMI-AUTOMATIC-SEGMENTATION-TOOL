@@ -11,7 +11,8 @@ prev_mask.png
 # node modules (can be installed based on package.json via npm install)
 node_modules/
 
-# exclude the large model
+# exclude the large models
+mask-rcnn.pth
 segformerB3_S2_comb.pth
 
 # Byte-compiled / optimized / DLL files

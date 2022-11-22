@@ -150,8 +150,8 @@ export default function SegmentationScreen() {
         // extracting X and Y of the point
         const { x, y } = nativeEvent;
 
-        /* a CSS stylesheet is used that changes the size of the canvas (Canvas.css) -> code in here is not
-        aware of that -> takes coordinates as if the canvas size has not been changed by the stylesheet
+        /* a CSS stylesheet is used that changes the size of the canvas (see corresponding .css file) -> code in 
+        here is not aware of that -> takes coordinates as if the canvas size has not been changed by the stylesheet
         -> wrong coordinates; e.g. placing a click on the bottom of the canvas leads to the click 
         being localized much further up because the canvas was "squished" by the stylesheet;
         therefore, a translation relative to the actual box of the rendered canvas is necessary
@@ -313,7 +313,7 @@ export default function SegmentationScreen() {
             /* reader.result contains the image in Base64 format; removing some additional info and wrapping it in 
             JSON to send it to the backend */
             const imageJson = {content: reader.result.split(',')[1]};
-            axios.put("http://localhost:8000/image", imageJson);
+            axios.put("http://localhost:8000/segmentation_image", imageJson);
             setCurrentImage(image);
         })
     }

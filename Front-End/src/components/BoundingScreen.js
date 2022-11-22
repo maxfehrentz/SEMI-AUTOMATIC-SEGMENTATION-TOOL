@@ -17,25 +17,25 @@ export default function SegmentationScreen() {
     const ctxRef2 = useRef(null);
 
     // track the current image and by which factor it was scaled
-   const [currentImage, setCurrentImage] = useState(null);
-   const currentScale = useRef(null);
+    const [currentImage, setCurrentImage] = useState(null);
+    const currentScale = useRef(null);
+ 
+    // track the bounding boxes
+    const [boundingBoxes, setBoundingBoxes] = useState([]);
+ 
+    // offsets in x and y direction to center the image in the window
+    const centerShiftX = useRef(null);
+    const centerShiftY = useRef(null);
+ 
+    // tracking whether or not the user is drawing
+    const isDrawing = useRef(false);
+ 
+    // tracking the origin of a rect while drawing
+    const originBoxX = useRef(null);
+    const originBoxY = useRef(null);
 
-   // track the bounding boxes
-   const [boundingBoxes, setBoundingBoxes] = useState([]);
 
-   // offsets in x and y direction to center the image in the window
-   const centerShiftX = useRef(null);
-   const centerShiftY = useRef(null);
-
-   // tracking whether or not the user is drawing
-   const isDrawing = useRef(false);
-
-   // tracking the origin of a rect while drawing
-   const originBoxX = useRef(null);
-   const originBoxY = useRef(null);
-
-
-	useEffect(() => {
+    useEffect(() => {
         const canvas1 = canvasRef1.current;
         const canvas2 = canvasRef2.current;
 
@@ -64,6 +64,9 @@ export default function SegmentationScreen() {
 
 
     useEffect(() => {
+        // TODO: differentiate between reset for segmentation and masks and reset for bounding boxes
+        // create new endpoint for that (but isn't the reset already done automatically?)
+
         // axios.post(
         //     `http://localhost:8000/reset/`        
         // ).then(() => {
@@ -113,88 +116,6 @@ export default function SegmentationScreen() {
     }, [boundingBoxes])
 
 
-    // const addPoint = ({nativeEvent}, typeOfClick) => {
-    //     // extracting X and Y of the point
-    //     const { x, y } = nativeEvent;
-
-    //     /* a CSS stylesheet is used that changes the size of the canvas (Canvas.css) -> code in here is not
-    //     aware of that -> takes coordinates as if the canvas size has not been changed by the stylesheet
-    //     -> wrong coordinates; e.g. placing a click on the bottom of the canvas leads to the click 
-    //     being localized much further up because the canvas was "squished" by the stylesheet;
-    //     therefore, a translation relative to the actual box of the rendered canvas is necessary
-    //     adapted from https://stackoverflow.com/questions/57910824/js-using-wrong-coordinates-when-drawing-on-canvas-with-margin
-    //     */
-    //     const canvas2 = canvasRef2.current;
-    //     const rect = canvas2.getBoundingClientRect();
-    //     // the height is divided by two because the canvas was scaled in the beginning by 2
-    //     const factor = (canvas2.height / 2) / rect.height;
-    //     const translatedY = factor * y;
-
-    //     let xRelativeToScaledImage = x - centerShiftX.current;
-    //     /* see the corresponding CSS file: canvas1 with the image is restricted to 90% of the height now,
-    //     while canvas2 is not and extends beyond the buttons because restricting canvas2 leads to a weird bug,
-    //     painting the clicks where they were made leads to the points painted in a lower y position */
-    //     let yRelativeToScaledImage = translatedY - centerShiftY.current;
-    //     if (xRelativeToScaledImage < currentImage.naturalWidth * currentScale.current && xRelativeToScaledImage >= 0) {
-    //         if (yRelativeToScaledImage < currentImage.naturalHeight * currentScale.current && yRelativeToScaledImage >= 0) {
-    //             // sending the points relative to the UNSCALED image to the backend; scaling the image in the front-end is only for convenience;
-    //             // the backend is oblivious to how the front-end displays the image
-    //             const pointJson = {
-    //                 x: xRelativeToScaledImage / currentScale.current, 
-    //                 y: yRelativeToScaledImage / currentScale.current, 
-    //                 typeOfClick: typeOfClick
-    //             };
-    //             axios.post(
-    //                 `http://localhost:8000/clicks/`, 
-    //                 pointJson
-    //             ).then(
-    //                 response => {
-    //                     // expecting the mask in base64 format
-    //                     const currentMask = new Image();
-    //                     currentMask.onload = function() {
-    //                         setCurrentMask(currentMask);
-    //                         if (rollbackDisabled) {
-    //                             setRollbackDisabled(false);
-    //                         }
-    //                     }
-    //                     // need to prepend this so HTML knows how to deal with the base64 encoding
-    //                     currentMask.src = "data:image/png;base64," + response.data;
-    //                 }
-    //             );
-    //             // saving the point to the list to be displayed
-    //             setPoints(prevPoints => {
-    //                 return [...prevPoints, {x: x, y: translatedY, typeOfClick:typeOfClick}];
-    //             })
-        
-    //         }
-    //         else {
-    //             console.log("point is not in the y range of the image.")
-    //         }
-    //     }
-    //     else {
-    //         console.log("point is not in the x range of the image.")
-    //     }
-    // }
-
-
-	// const drawPoint = ({x, y, typeOfClick}) => {
-    //     ctxRef2.current.beginPath();
-    //     /* x and y are relative to the upper left corner of the unscaled image, drawing however is relative to
-    //     the full screen and the scaled image, therefore the center shifts need to be added*/
-    //     ctxRef2.current.arc(x, y, 4, 0, 2 * Math.PI);
-    //     if (typeOfClick === "positive") {
-    //         ctxRef2.current.fillStyle = "#AAFF00";
-    //     }
-    //     else if (typeOfClick === "negative") {
-    //         ctxRef2.current.fillStyle = "#FF0000";
-    //     }
-    //     else {
-    //         console.log(typeOfClick)
-    //         throw new Error("the type of this click is unknown!");
-    //     }
-    //     ctxRef2.current.fill();
-	// };
-
 	const clearEverything = () => {
 		ctxRef1.current.clearRect(
 			0,
@@ -216,6 +137,7 @@ export default function SegmentationScreen() {
         })
     };
 
+
     const clearCanvas2 = () => {
         ctxRef2.current.clearRect(
 			0,
@@ -225,8 +147,10 @@ export default function SegmentationScreen() {
         );
     };
     
+
     const loadImage = async () => {
         // removing everything
+        // TODO: find a cleaner solution to make this go hand-in-hand with the resets
         clearEverything();
 
         // TODO: make sure to accept only .jpeg, .png, .jpg
@@ -239,14 +163,38 @@ export default function SegmentationScreen() {
         const reader = new FileReader();
         // CONVERTS Image TO BASE 64
         reader.readAsDataURL(file);
+
         // setting the image when loaded and sending it to the backend
         reader.addEventListener("load", function () {
+
             image.src = reader.result;
             /* reader.result contains the image in Base64 format; removing some additional info and wrapping it in 
             JSON to send it to the backend */
             const imageJson = {content: reader.result.split(',')[1]};
-            // TODO: connect this somehow to the backend
-            // axios.put("http://localhost:8000/image", imageJson);
+
+            // sending the image to the backend
+            axios.put("http://localhost:8000/bounding_image", imageJson).then(
+                response => {
+                    // TODO: check the status and do error handling
+                    setBoundingBoxes(prevBoxes => {
+
+                        // need to transform the format (x1,y1,x2,y2) for each array into (x1,y1,width,height)
+                        const arrayOfBoxes = response.data
+                        const transformedBoxes = []
+                        for (const box of arrayOfBoxes) {
+                            // coordinates are relative to the image, therefore adapting
+                            // to scaling and shifts necessary
+                            transformedBoxes.push({
+                                x: box[0] * currentScale.current + centerShiftX.current, 
+                                y: box[1] * currentScale.current + centerShiftY.current, 
+                                width: (box[2] - box[0]) * currentScale.current,
+                                height: (box[3] - box[1]) * currentScale.current
+                            })
+                        }
+                        return prevBoxes.concat(transformedBoxes)
+                    })
+                }
+            );
             setCurrentImage(image);
         })
     }
@@ -254,6 +202,17 @@ export default function SegmentationScreen() {
     const navigate = useNavigate();
 
     const continueToSegmentation = useCallback(() => navigate('/segmentation', {replace: true}), [navigate]);
+
+    // need to adjust for squishing on the y-axis, see SegmentationScreen.js for more explanation on this
+    // TODO: also implement this for x; there might be images wider than the screen at some point
+    const translateY = (y) => {
+        const canvas2 = canvasRef2.current;
+        const rect = canvas2.getBoundingClientRect();
+        // the height is divided by two because the canvas was scaled in the beginning by 2
+        const factor = (canvas2.height / 2) / rect.height;
+        const translatedY = factor * y;
+        return translatedY
+    }
 
     const startOrStopDrawingBox = ({nativeEvent}) => {
         if (isDrawing.current) {
@@ -263,12 +222,16 @@ export default function SegmentationScreen() {
         // only allow drawing if there is an image set
         else if (currentImage) {
             isDrawing.current = true;
+            
             const {x, y} = nativeEvent;
+            const translatedY = translateY(y);
+
             originBoxX.current = x;
-            originBoxY.current = y;
+            originBoxY.current = translatedY;
+
             // create entry in the bounding box list
             setBoundingBoxes(prevBoxes => {
-                return [...prevBoxes, {x: x, y: y, width: 0, height: 0}]
+                return [...prevBoxes, {x: x, y: translatedY, width: 0, height: 0}]
             })
         }
     }
@@ -284,9 +247,11 @@ export default function SegmentationScreen() {
             return;
         }
         const {x, y} = nativeEvent;
+        const translatedY = translateY(y);
+
         setBoundingBoxes(prevBoxes => {
             const newBoxes = prevBoxes.slice(0, -1);
-            newBoxes.push({x: originBoxX.current, y: originBoxY.current, width: x - originBoxX.current, height: y - originBoxY.current});
+            newBoxes.push({x: originBoxX.current, y: originBoxY.current, width: x - originBoxX.current, height: translatedY - originBoxY.current});
             return newBoxes;
         })
     })
