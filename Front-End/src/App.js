@@ -10,7 +10,7 @@ function App() {
       <Routes>
         <Route exact path="/" element={<HomeScreen />} />
         <Route exact path="/bounding" element={<BoundingScreen />} />
-        <Route exact path="/segmentation" element={<SegmentationScreen />} />
+        <Route exact path="/segmentation/:ids" element={<SegmentationScreen />} />
       </Routes>
     </Router>
   );

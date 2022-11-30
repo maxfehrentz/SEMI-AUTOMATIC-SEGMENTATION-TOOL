@@ -23,7 +23,7 @@ INPUT:
     - 0.9
     - 0.9
     TYPE: relative_range
-  FORMAT: BGR
+  FORMAT: RGB
   MASK_FORMAT: polygon
   MAX_SIZE_TEST: 1333
   MAX_SIZE_TRAIN: 1333
@@ -66,7 +66,7 @@ MODEL:
     - res3
     - res4
     - res5
-    NORM: ''
+    NORM: GN
     OUT_CHANNELS: 256
   KEYPOINT_ON: false
   LOAD_PROPOSALS: false
@@ -84,9 +84,9 @@ MODEL:
   - 116.28
   - 123.675
   PIXEL_STD:
-  - 1.0
-  - 1.0
-  - 1.0
+  - 57.375
+  - 57.12
+  - 58.395
   PROPOSAL_GENERATOR:
     MIN_SIZE: 0
     NAME: RPN
@@ -99,7 +99,7 @@ MODEL:
     - false
     - false
     DEPTH: 50
-    NORM: FrozenBN
+    NORM: GN
     NUM_GROUPS: 1
     OUT_FEATURES:
     - res2
@@ -109,7 +109,7 @@ MODEL:
     RES2_OUT_CHANNELS: 256
     RES5_DILATION: 1
     STEM_OUT_CHANNELS: 64
-    STRIDE_IN_1X1: true
+    STRIDE_IN_1X1: false
     WIDTH_PER_GROUP: 64
   RETINANET:
     BBOX_REG_LOSS_TYPE: smooth_l1
@@ -170,9 +170,9 @@ MODEL:
     FED_LOSS_FREQ_WEIGHT_POWER: 0.5
     FED_LOSS_NUM_CLASSES: 50
     NAME: FastRCNNConvFCHead
-    NORM: ''
-    NUM_CONV: 0
-    NUM_FC: 2
+    NORM: GN
+    NUM_CONV: 4
+    NUM_FC: 1
     POOLER_RESOLUTION: 7
     POOLER_SAMPLING_RATIO: 0
     POOLER_TYPE: ROIAlignV2
@@ -220,7 +220,7 @@ MODEL:
     CLS_AGNOSTIC_MASK: false
     CONV_DIM: 256
     NAME: MaskRCNNConvUpsampleHead
-    NORM: ''
+    NORM: GN
     NUM_CONV: 4
     POOLER_RESOLUTION: 14
     POOLER_SAMPLING_RATIO: 0
@@ -268,13 +268,13 @@ MODEL:
     NAME: SemSegFPNHead
     NORM: GN
     NUM_CLASSES: 54
-  WEIGHTS: ../Mask-RCNN/mask-rcnn.pth
+  WEIGHTS: ../Mask-RCNN/model_RGB.pth
 OUTPUT_DIR: ./output
 SEED: -1
 SOLVER:
   AMP:
     ENABLED: false
-  BASE_LR: 0.02
+  BASE_LR: 0.08
   BASE_LR_END: 0.0
   BIAS_LR_FACTOR: 1.0
   CHECKPOINT_PERIOD: 5000
@@ -284,17 +284,17 @@ SOLVER:
     ENABLED: false
     NORM_TYPE: 2.0
   GAMMA: 0.1
-  IMS_PER_BATCH: 16
+  IMS_PER_BATCH: 64
   LR_SCHEDULER_NAME: WarmupMultiStepLR
-  MAX_ITER: 270000
+  MAX_ITER: 202500
   MOMENTUM: 0.9
   NESTEROV: false
   NUM_DECAYS: 3
   REFERENCE_WORLD_SIZE: 0
   RESCALE_INTERVAL: false
   STEPS:
-  - 210000
-  - 250000
+  - 187500
+  - 197500
   WARMUP_FACTOR: 0.001
   WARMUP_ITERS: 1000
   WARMUP_METHOD: linear
@@ -317,7 +317,7 @@ TEST:
     - 1100
     - 1200
   DETECTIONS_PER_IMAGE: 100
-  EVAL_PERIOD: 0
+  EVAL_PERIOD: 2500
   EXPECTED_RESULTS: []
   KEYPOINT_OKS_SIGMAS: []
   PRECISE_BN:

@@ -1,4 +1,4 @@
-import { React, useEffect, useRef, useState, useCallback } from 'react';
+import { React, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './BoundingScreen.css';
 import axios from 'axios';
@@ -7,7 +7,7 @@ import axios from 'axios';
  TODO: figure out how to deal with all the code duplication (e.g. for loading the image; maybe those hooks
     can be generalized and moved to separate files)
  */
-export default function SegmentationScreen() {
+export default function BoundingScreen() {
 
     const canvasRef1 = useRef(null);
     const canvasRef2 = useRef(null);
@@ -22,6 +22,9 @@ export default function SegmentationScreen() {
  
     // track the bounding boxes
     const [boundingBoxes, setBoundingBoxes] = useState([]);
+
+    // track which ids are available
+    const availableId = useRef(0);
  
     // offsets in x and y direction to center the image in the window
     const centerShiftX = useRef(null);
@@ -103,19 +106,22 @@ export default function SegmentationScreen() {
 
 
     useEffect(() => {
-
         clearCanvas2();
 
         const ctx = ctxRef2.current;
         ctx.strokeStyle = "red";
 
         for (const boundingBox of boundingBoxes) {
-            const {x, y, width, height} = boundingBox;
+            const {x, y, width, height, id} = boundingBox;
             ctx.strokeRect(x, y, width, height);
         }
     }, [boundingBoxes])
 
 
+    /* 
+    TODO: unclear when stuff is "cleared", "resetted", etc.; make this better and settle on a
+    convention where cleaning is happening, e.g. only in hooks, only in custom functions, ...?
+    */
 	const clearEverything = () => {
 		ctxRef1.current.clearRect(
 			0,
@@ -135,6 +141,7 @@ export default function SegmentationScreen() {
         setBoundingBoxes(_ => {
             return [];
         })
+        availableId.current = 0;
     };
 
 
@@ -172,26 +179,38 @@ export default function SegmentationScreen() {
             JSON to send it to the backend */
             const imageJson = {content: reader.result.split(',')[1]};
 
-            // sending the image to the backend
-            axios.put("http://localhost:8000/bounding_image", imageJson).then(
+            // sending the image to the backend and receive the bounding boxes
+            axios.put("http://localhost:8000/bounding-image", imageJson).then(
                 response => {
                     // TODO: check the status and do error handling
                     setBoundingBoxes(prevBoxes => {
 
-                        // need to transform the format (x1,y1,x2,y2) for each array into (x1,y1,width,height)
+                        // need to transform the format (x1,y1,x2,y2,identifier) (x1,y1,width,height,identifier)
                         const arrayOfBoxes = response.data
-                        const transformedBoxes = []
+                        var newBoxes = [];
                         for (const box of arrayOfBoxes) {
                             // coordinates are relative to the image, therefore adapting
                             // to scaling and shifts necessary
-                            transformedBoxes.push({
-                                x: box[0] * currentScale.current + centerShiftX.current, 
-                                y: box[1] * currentScale.current + centerShiftY.current, 
+                            // TODO: bounding boxes are very narrow, maybe scale them by some factor like 1.1?
+                            newBoxes.push(
+                                {
+                                x: (box[0] * currentScale.current + centerShiftX.current), 
+                                y: (box[1] * currentScale.current + centerShiftY.current), 
                                 width: (box[2] - box[0]) * currentScale.current,
-                                height: (box[3] - box[1]) * currentScale.current
-                            })
+                                height: (box[3] - box[1]) * currentScale.current,
+                                id: box[4]
+                                }
+                            );
                         }
-                        return prevBoxes.concat(transformedBoxes)
+                        /* 
+                        TODO: this will only work if the user cannot create boxes already during loading of the
+                        mask rcnn boxes
+                        */
+                        newBoxes = prevBoxes.concat(newBoxes);
+                        availableId.current = newBoxes.length;
+                        console.log(`set available id to ${availableId.current}`);
+
+                        return [...newBoxes];
                     })
                 }
             );
@@ -200,8 +219,6 @@ export default function SegmentationScreen() {
     }
 
     const navigate = useNavigate();
-
-    const continueToSegmentation = useCallback(() => navigate('/segmentation', {replace: true}), [navigate]);
 
     // need to adjust for squishing on the y-axis, see SegmentationScreen.js for more explanation on this
     // TODO: also implement this for x; there might be images wider than the screen at some point
@@ -231,15 +248,26 @@ export default function SegmentationScreen() {
 
             // create entry in the bounding box list
             setBoundingBoxes(prevBoxes => {
-                return [...prevBoxes, {x: x, y: translatedY, width: 0, height: 0}]
+                const id = availableId.current;
+                console.log(`assigning id ${id}`);
+                prevBoxes.push(
+                    {
+                        x: x, 
+                        y: translatedY, 
+                        width: 0, 
+                        height: 0, 
+                        id: id
+                    }
+                )
+                return [...prevBoxes];
             })
         }
     }
 
     const stopDrawingBox = (() => {
-        // TODO: add the box to the list of bounding boxes (also create that list as a state)
         originBoxX.current = null;
         originBoxY.current = null;
+        availableId.current++;
     })
 
     const drawBox = (({nativeEvent}) => {
@@ -250,11 +278,58 @@ export default function SegmentationScreen() {
         const translatedY = translateY(y);
 
         setBoundingBoxes(prevBoxes => {
-            const newBoxes = prevBoxes.slice(0, -1);
-            newBoxes.push({x: originBoxX.current, y: originBoxY.current, width: x - originBoxX.current, height: translatedY - originBoxY.current});
-            return newBoxes;
+            const currentBox = prevBoxes.pop();
+            const id = currentBox.id;
+            if(id !== availableId.current) {
+                throw Error(`not modifying the current box! box id is ${id} but current id is ${availableId.current}`);
+            }
+            prevBoxes.push( 
+                {
+                    x: originBoxX.current, 
+                    y: originBoxY.current, 
+                    width: x - originBoxX.current, 
+                    height: translatedY - originBoxY.current,
+                    id: id
+                }
+            );
+            return [...prevBoxes];
         })
     })
+
+
+    const moveToSegmentation = async () => {
+
+        // prepare the bounding boxes to be sent to the backend
+        // TODO: generalize this in a separate file
+        const boxesRelativeToOriginalImage = [];
+        for (const box of boundingBoxes) {
+            // coordinates are relative to the image, therefore adapting
+            // to scaling and shifts necessary
+            boxesRelativeToOriginalImage.push(
+                {
+                x: (box.x - centerShiftX.current) / currentScale.current, 
+                y: (box.y - centerShiftY.current) / currentScale.current,
+                width: box.width / currentScale.current,
+                height: box.height / currentScale.current,
+                id: box.id
+                }
+            );
+        }
+
+        // TODO: make front-end/frontend and back-end/backend consistent
+        const boundingBoxesJson = {bounding_boxes: boxesRelativeToOriginalImage};
+
+        // send final state of the boxes to the backend
+        axios.put("http://localhost:8000/bounding-boxes", boundingBoxesJson).then(_ => {
+                // ignoring the response, bc ending up here means status ok
+                navigate(`/segmentation/${boundingBoxes.map(boundingBox => boundingBox.id)}`);
+            }
+        ).catch(error => {
+            console.log(`error with code ${error.response.status} occurred while trying to send the final
+            bounding boxes to the backend`);
+            // TODO: show this in the web app?
+        });
+    }
 
 
 	return (
@@ -273,7 +348,7 @@ export default function SegmentationScreen() {
             <button className="button_bounding" onClick={loadImage}>
 	        	Load image
 	        </button>
-            <button className="button_bounding" onClick={continueToSegmentation}>
+            <button className="button_bounding" onClick={moveToSegmentation}>
 	        	Continue to segmentation
 	        </button>
         </div>

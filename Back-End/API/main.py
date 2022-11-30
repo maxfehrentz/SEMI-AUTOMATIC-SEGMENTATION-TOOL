@@ -52,19 +52,43 @@ app.add_middleware(
 class ImageBase64(BaseModel):
     content: bytes
 
+
 # making an enum instead of using bool because later we might have automatically generated clicks
 # and it might be necessary to indicate that, e.g. with "artif_pos"
 class ClickType(str, Enum):
     positive = "positive"
     negative = "negative"
 
+
 class Click(BaseModel):
     x: float
     y: float
-    typeOfClick: ClickType
+    type_of_click: ClickType
+
+
+# classes to interface with the frontend
+class BoundingBox(BaseModel):
+    x: float
+    y: float
+    width: float
+    height: float
+    id: int
+
+
+class BoundingBoxList(BaseModel):
+    bounding_boxes: List[BoundingBox]
+
+
+# class to interface with the mask-rcnn
+class ROI():
+    def __init__(self, bounding_box: torch.Tensor, suggested_mask: torch.Tensor):
+        # each bounding box is represented by the lower left and the upper right corner: x1, y1, x2, y2
+        self.bounding_box = bounding_box
+        self.suggested_mask = suggested_mask
 
 # as np array
 global current_segmentation_image
+# TODO: why is this a string and not an empty np.array?
 current_segmentation_image = ""
 
 # as pytorch tensors
@@ -73,9 +97,20 @@ mask = None
 global prev_mask
 prev_mask = None
 
-# paths where to save the current mask and the previous mask
-path_to_current_mask = "./masks/current_mask.png"
-path_to_prev_mask = "./masks/prev_mask.png"
+# dictionary of ROIs, key is the identifier, value is the ROI object
+rois = dict()
+
+# paths where to save the current and previous mask and the corresponding segment
+segment_folder = "./segments"
+path_to_segment = os.path.join(segment_folder, "current_segment.png")
+mask_folder = "./masks"
+path_to_current_mask = os.path.join(mask_folder, "current_mask.png")
+path_to_prev_mask = os.path.join(mask_folder, "prev_mask.png")
+# create the necessary folders
+if not os.path.isdir(segment_folder):
+    os.makedirs(segment_folder)
+if not os.path.isdir(mask_folder):
+    os.makedirs(mask_folder)
 
 # TODO: check if necessary
 # paths where to save the bounding boxes
@@ -88,7 +123,7 @@ device = torch.device('cpu')
 path_to_segmentation_model = "../FocalClick/models/focalclick/segformerB3_S2_comb.pth"
 net = load_is_model(path_to_segmentation_model, device)
 
-predictor = FocalPredictor(net, device)
+focal_click_predictor = FocalPredictor(net, device)
 
 # import and setup the mask r-cnn pretrained on wgisd and data from the AIRLab at Polimi by another student
 # for more information, contact riccardo.bertoglio@polimi.it
@@ -96,22 +131,24 @@ path_to_cfg_file = "../Mask-RCNN/mask_rcnn_config.yaml"
 
 cfg = get_cfg()
 
-# TODO: this was set to "BGR", why? maybe ask Riccardo
+# setting the input format
 cfg.INPUT.FORMAT = "RGB"
 
+# loading the config from the yaml file
 cfg.merge_from_file(path_to_cfg_file)
 
-# all this code has been replaced by the just loading the yaml file that this code created; left for future
-# reference
+
+# # all this code has been replaced by the just loading the yaml file that this code created; left for future
+# # reference
 
 # # get standard parameters for the configuration  
 # # TODO: dump all this in a yaml file that can be simply loaded in the future
-# model_file = "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml" 
+# model_file = "Misc/scratch_mask_rcnn_R_50_FPN_9x_gn.yaml" 
 # cfg.merge_from_file(model_zoo.get_config_file(model_file))
 
 # # loading the weights
 # # TODO: exclude this in the .gitignore and mention in the readme.md how to get it
-# cfg.MODEL.WEIGHTS = os.path.join("../Mask-RCNN/", "mask-rcnn.pth")
+# cfg.MODEL.WEIGHTS = os.path.join("../Mask-RCNN/", "model_RGB.pth")
 
 # # run on a cpu
 # # TODO: if this ever gets deployed on a server with a GPU, this needs to be changed
@@ -124,65 +161,74 @@ cfg.merge_from_file(path_to_cfg_file)
 
 # # dumping the cfg
 # f = open("../Mask-RCNN/mask_rcnn_config.yaml", "x")
-# print(f"config dump: {cfg.dump()}")
 # f.write(cfg.dump())
 # f.close()
 
-# setting up the predictor
-predictor = DefaultPredictor(cfg)
 
-# list of bounding boxes
-bounding_boxes = []
+# setting up the predictor for the Mask-RCNN
+mask_rcnn_predictor = DefaultPredictor(cfg)
 
 
-@app.put("/segmentation_image")
-async def update_segmentation_image(imageBase64: ImageBase64):
+# TODO: better naming! this also saves the masks
+# TODO: create docstrings for the methods in the very end
+def update_segment(image, initial_mask = None):
     global current_segmentation_image
     global mask
     global prev_mask
 
-    # adapted from https://stackoverflow.com/questions/57318892/convert-base64-encoded-image-to-a-numpy-array
-    decoded_img = base64.b64decode(imageBase64.content)
-    decoded_img = Image.open(io.BytesIO(decoded_img))
-    current_segmentation_image = np.array(decoded_img, dtype = np.uint8)
-    current_segmentation_image = current_segmentation_image[:, :, :-1]
+    # setting the new segmentation image
+    current_segmentation_image = image
 
     # resetting the clicks
     clicks.clear()
 
-    # resetting the mask
-    mask = None
-    prev_mask = None
-
-    # image files will be deleted as well
+    # deleting all files
+    if os.path.isfile(path_to_segment):
+        os.remove(path_to_segment)
     if os.path.isfile(path_to_current_mask):
         os.remove(path_to_current_mask)
     if os.path.isfile(path_to_prev_mask):
         os.remove(path_to_prev_mask)
 
+    # saving the segment
+    cv2.imwrite(path_to_segment, current_segmentation_image)
+
+    # TODO: think about saving mechanisms and folders: what should be saved permanently, what
+    # will be overridden during use?
+
+    # resetting/initializing and saving the masks
+    prev_mask = None
+    if initial_mask is None:
+        mask = None
+    else:
+        mask = initial_mask
+        save_current_and_prev_mask()
+
     return
 
 
-@app.put("/bounding_image")
+@app.put("/bounding-image")
+# TODO: find more suitable name than "bounding image"
 async def update_bounding_image(imageBase64: ImageBase64):
     global current_bounding_image
-    global bounding_boxes
 
     # adapted from https://stackoverflow.com/questions/57318892/convert-base64-encoded-image-to-a-numpy-array
     decoded_img = base64.b64decode(imageBase64.content)
     decoded_img = Image.open(io.BytesIO(decoded_img))
     current_bounding_image = np.array(decoded_img, dtype = np.uint8)
 
-    # resetting the bounding boxes
-    bounding_boxes.clear()
+    # resetting the rois
+    rois.clear()
 
     # TODO: implement some sort of saving mechanism once the user is done with the bounding boxes
-    # json file will be deleted as well
-    if os.path.isfile(path_to_bounding_boxes):
-        os.remove(path_to_bounding_boxes)
+    # json file will be deleted as well; probably this needs to go in another place as
+    # the user hasn't even started to correct them
+    # if os.path.isfile(path_to_bounding_boxes):
+    #     os.remove(path_to_bounding_boxes)
 
-    # run the mask-rcnn; this is in a detectron2 specific format
-    bounding_boxes = predictor(current_bounding_image)
+    # run the mask-rcnn; the output is in a detectron2 specific format
+    # see https://detectron2.readthedocs.io/en/latest/modules/structures.html for details
+    mask_rccn_output = mask_rcnn_predictor(current_bounding_image)
 
     # TODO: process the bounding boxes for the front-end (and later also the masks)
     # send bounding boxes relative to the image to the front-end, DO NOT save them yet as json files yet;
@@ -191,27 +237,44 @@ async def update_bounding_image(imageBase64: ImageBase64):
     # boxes + masks into COCO/Pascal Voc or whatever format and save them; still the masks need to be
     # extracted here and saved somehow
 
-    # see https://detectron2.readthedocs.io/en/latest/modules/structures.html for details
-    instances = bounding_boxes["instances"]
-    boxes_tensor = instances.get("pred_boxes").tensor
+    instances = mask_rccn_output["instances"]
+    # the tensor is of shape (number of boxes, 4), where the 4 entries are x1, y1, x2, and y2
+    # they represent the coordinates of the upper left and lower right corner
+    boxes_tensors = instances.get("pred_boxes").tensor
+    # while it will not be returned now, it is also important to extract the masks as well
+    masks_tensors = instances.get("pred_masks")
 
-    return boxes_tensor.tolist()
+    # TODO: also implement retrieving the predicted classes and make it potentially multiclass in the ROI class
+
+    # the boxes receive unique ids
+    boxes_with_id = []
+    for i in range(len(boxes_tensors)):
+        rois.update({i: ROI(bounding_box = boxes_tensors[i], suggested_mask = masks_tensors[i])})
+        # the rois dict is for the backend; however, the frontend needs just the boxes with their ids
+        boxes_with_id.append(boxes_tensors[i].tolist() + [i])
+
+    return boxes_with_id
 
 
 def save_current_and_prev_mask():
     mask_np = mask.numpy()
     zero_matrix = np.zeros_like(mask_np)
 
-    # adding transparency channel derived from the mask to make the red area more transparent and the rest fully transparent
-    full_image = cv2.merge((zero_matrix, zero_matrix, mask_np * 255, mask_np * 127))
+    # adding transparency channel derived from the mask to make the red area 
+    # more transparent and the rest fully transparent
+    mask_image = cv2.merge((zero_matrix, zero_matrix, mask_np * 255, mask_np * 127))
 
     if prev_mask is not None:
         # in that case, we know that a previous mask already existed
         # we move it to preserve it
-        os.rename('current_mask.png', 'prev_mask.png')
+        os.rename(path_to_current_mask, path_to_prev_mask)
 
-    # save the full_image
-    cv2.imwrite(path_to_current_mask, full_image)
+    # save the mask image
+    success = cv2.imwrite(path_to_current_mask, mask_image)
+    if not success:
+        raise Exception("Writing the image failed!")
+
+    return
 
 
 @app.post("/clicks/")
@@ -223,7 +286,7 @@ async def add_click(click: Click):
     prev_mask = mask
 
     clicks.append(click)
-    mask = compute_mask(current_segmentation_image, clicks, prev_mask, predictor)
+    mask = compute_mask(current_segmentation_image, clicks, prev_mask, focal_click_predictor)
 
     save_current_and_prev_mask()
 
@@ -246,7 +309,9 @@ async def reset():
     mask = None
     prev_mask = None
 
-    # image files will be deleted as well
+    # image files of the masks will be deleted, the segmentation image remains
+    # because this resets only the segmentation process, not the segment
+    # to be segmented
     if os.path.isfile(path_to_current_mask):
         os.remove(path_to_current_mask)
     if os.path.isfile(path_to_prev_mask):
@@ -282,6 +347,100 @@ async def roll_back_click():
         raise HTTPException(status_code=404, detail="No previous mask available")
 
 
+@app.put("/bounding-boxes")
+async def save_bounding_boxes_from_frontend(bounding_box_list: BoundingBoxList):
+
+    print(f"received bounding boxes: {bounding_box_list.bounding_boxes}")
+
+    for frontend_box in bounding_box_list.bounding_boxes:
+
+        # checks whether the key is in the dict, meaning that this box is already registered in the backend
+        if frontend_box.id in rois:
+
+            # get box corresponding to that id in the backend to compare
+            backend_box = rois.get(frontend_box.id).bounding_box
+            # corresponds to x2 - x1
+            backend_box_width = backend_box[2] - backend_box[0]
+            # corresponds to y2 - y1
+            backend_box_height = backend_box[3] - backend_box[1]
+
+            # need to check whether the box has been changed; if yes, the mask also becomes invalid
+            if(
+                # [0] corresponds to x1
+                frontend_box.x != backend_box[0]
+                # [1] corresponds to y1
+                or frontend_box.y != backend_box[1]
+                or frontend_box.width != backend_box_width
+                or frontend_box.height != backend_box_height
+            ):
+                # the box has been changed in the frontend, therefore the box from the
+                # frontend replaces the box that was initially generated by the mask-rcnn
+                # moreover, we do not pass a mask, which then defaults to None; this removes the initally
+                # suggested mask on purpose, because since the bounding box has been changed,
+                # we cannot trust the mask either
+                rois[frontend_box.id] = ROI(
+                    bounding_box = tf.constant([
+                        frontend_box.x, 
+                        frontend_box.y, 
+                        frontend_box.x + frontend_box.width,
+                        frontend_box.y + frontend_box.height])
+                    )
+
+        # boxes that are not in the rois have been added in the frontend and therefore also have no mask
+        else:
+            print(f"new bounding box with id {bounding_box.id}")
+            rois[frontend_box.id] = ROI(
+                    bounding_box = tf.constant([
+                        frontend_box.x, 
+                        frontend_box.y, 
+                        frontend_box.x + frontend_box.width,
+                        frontend_box.y + frontend_box.height])
+                    )
+
+        # TODO: IMPORTANT: loop over the keys (ids) and remove the bounding boxes from the rois dict, that were not
+        # returned from the frontend, since that means they have been removed by the user
+
+    return
+
+
+@app.get("/segments/{id}")
+async def get_segment_with(id: int):
+    
+    # TODO: do error handling here in case nonsense ids are being passed
+
+    x_origin = int(rois.get(id).bounding_box[0])
+    y_origin = int(rois.get(id).bounding_box[1])
+    x_limit = int(rois.get(id).bounding_box[2])
+    y_limit = int(rois.get(id).bounding_box[3])
+
+    # get the relevant part of the image
+    image_segment = current_bounding_image[y_origin:y_limit, x_origin:x_limit, :]
+
+    # get the relevant mask, might be None, e.g. if the roi did not come from the mask rcnn but
+    # was created in the frontend, or if an existing bounding box was scaled or moved by the user
+    mask = rois.get(id).suggested_mask
+    
+    # calling update_segment will setup everything for the new segment in the backend
+    if mask is None:
+        update_segment(image_segment)
+    else:
+        # cropping the mask as well to the releveant area
+        mask = mask[y_origin:y_limit, x_origin:x_limit]
+        # .long() is necessary to convert the mask to whole numbers, because
+        # the mask r-cnn returns a boolean tensor
+        update_segment(image_segment, mask.long())
+    
+
+    # return both image and mask to the frontend
+    with open(path_to_segment, "rb") as image_file:
+        encoded_segment = base64.b64encode(image_file.read())
+
+    encoded_mask = ""
+    if mask is not None:
+        with open(path_to_current_mask, "rb") as image_file:
+            encoded_mask = base64.b64encode(image_file.read())
+
+    return [encoded_segment, encoded_mask]
 
     
 

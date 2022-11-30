@@ -1,12 +1,25 @@
 import { React, useEffect, useRef, useState } from 'react';
 import './SegmentationScreen.css';
 import axios from 'axios';
+import { useParams } from 'react-router-dom';
+
 
 export default function SegmentationScreen() {
+
+    // this accesses the parameteres that were passed while navigating from the previous screen
+    const params = useParams();
+    // ids of segments passed from the previous screen
+    const ids = params.ids.split(",");
+
+    /*
+    tracking the current segment; the index will move through the array of ids, retrieving the ids
+    over time while the user annotates the individual segments
+    */
+    // TODO: check that this does not crash when passing no ids from the previous screen
+    const [currentIndex, setCurrentIndex] = useState(0);
+
     const canvasRef1 = useRef(null);
     const canvasRef2 = useRef(null);
-	// Storing the context in a ref so we can use it
-	// later to draw on the canvas
     const ctxRef1 = useRef(null);
     const ctxRef2 = useRef(null);
 
@@ -48,7 +61,6 @@ export default function SegmentationScreen() {
             e.preventDefault();       
         });
 
-
     }, []);
 
 
@@ -59,6 +71,54 @@ export default function SegmentationScreen() {
 		canvas.style.width = `${window.innerWidth}px`;
 		canvas.style.height = `${window.innerHeight}px`;
     }
+
+    
+    useEffect(() => {
+
+        // when the index changes, the segment changes and we can clean up the screen and reset everything
+        clearCanvas();
+
+        /*
+        TODO: do sanity check here, because if the currentIndex gets larger than the size of
+        the ids array, we are done with the segmentation. Also, whenever the currentIndex changes
+        (except for the initialization), we also want to notify the backend in a separate request
+        that we are done and the generated mask can be saved as final!
+        */
+        const id = ids[currentIndex];
+
+        axios.get(
+            `http://localhost:8000/segments/${id}`       
+        ).then(response => {
+            // excepting the image segment and optionally a suggested mask
+            // TODO: deal with the case that backend offers no mask suggestion
+            const currentMask = new Image();
+            const currentImage = new Image();
+
+            currentMask.onload = function() {
+                // TODO: this rollback stuff should be done in the useEffect that is triggered right below
+                // this occurs somewhere else as well, make sure to change both
+                if (rollbackDisabled) {
+                    setRollbackDisabled(false);
+                }
+                setCurrentMask(currentMask);
+            }
+
+            currentImage.onload = function() {
+                setCurrentImage(currentImage);
+            }
+
+            // need to prepend this so HTML knows how to deal with the base64 encoding
+            const prefix = "data:image/png;base64,"
+            currentImage.src = prefix + response.data[0];
+            currentMask.src = prefix + response.data[1];
+
+        }).catch(error => {
+            if (error.response.status === 404) {
+                // that means that the requested resource was not available
+                throw Error(`There is no segment with the id ${id}`);
+            }
+        });
+    }, [currentIndex])
     
 
     useEffect(() => {
@@ -79,39 +139,35 @@ export default function SegmentationScreen() {
 
 
     useEffect(() => {
-        // first, notify the backend to also reset the mask
-        axios.post(
-            `http://localhost:8000/reset/`        
-        ).then(() => {
-            if (!currentImage) {
-                return;
-            }
-            const canvas = canvasRef1.current;
-            const ctx = ctxRef1.current;
-    
-            // scaling adapted from https://stackoverflow.com/questions/10841532/canvas-drawimage-scaling
-            var naturalWidth = currentImage.naturalWidth;
-            var naturalHeight = currentImage.naturalHeight;
-            var imgWidth = naturalWidth;
-            var screenWidth  = canvas.width / 2;
-            var scaleX = 1;
-            scaleX = screenWidth/imgWidth;
-            var imgHeight = naturalHeight;
-            var screenHeight = canvas.height / 2;
-            var scaleY = 1;
-            scaleY = screenHeight/imgHeight;
-            var scale = scaleY;
-            if(scaleX < scaleY)
-                scale = scaleX;
-            currentScale.current = scale;
-    
-            imgHeight = imgHeight*scale;
-            imgWidth = imgWidth*scale;
-            // need to divide by two in the end because the whole canvas was scaled by 2
-            centerShiftX.current = ((canvas.width / 2) - imgWidth) / 2;
-            centerShiftY.current = ((canvas.height / 2) - imgHeight) / 2;
-            ctx.drawImage(currentImage, 0, 0, naturalWidth, naturalHeight, centerShiftX.current, centerShiftY.current, imgWidth, imgHeight);
-        })
+        if (!currentImage) {
+            return;
+        }
+
+        const canvas = canvasRef1.current;
+        const ctx = ctxRef1.current;
+
+        // scaling adapted from https://stackoverflow.com/questions/10841532/canvas-drawimage-scaling
+        var naturalWidth = currentImage.naturalWidth;
+        var naturalHeight = currentImage.naturalHeight;
+        var imgWidth = naturalWidth;
+        var screenWidth  = canvas.width / 2;
+        var scaleX = 1;
+        scaleX = screenWidth/imgWidth;
+        var imgHeight = naturalHeight;
+        var screenHeight = canvas.height / 2;
+        var scaleY = 1;
+        scaleY = screenHeight/imgHeight;
+        var scale = scaleY;
+        if(scaleX < scaleY)
+            scale = scaleX;
+        currentScale.current = scale;
+
+        imgHeight = imgHeight*scale;
+        imgWidth = imgWidth*scale;
+        // need to divide by two in the end because the whole canvas was scaled by 2
+        centerShiftX.current = ((canvas.width / 2) - imgWidth) / 2;
+        centerShiftY.current = ((canvas.height / 2) - imgHeight) / 2;
+        ctx.drawImage(currentImage, 0, 0, naturalWidth, naturalHeight, centerShiftX.current, centerShiftY.current, imgWidth, imgHeight);
     }, [currentImage])
 
 
@@ -157,17 +213,20 @@ export default function SegmentationScreen() {
         therefore, a translation relative to the actual box of the rendered canvas is necessary
         adapted from https://stackoverflow.com/questions/57910824/js-using-wrong-coordinates-when-drawing-on-canvas-with-margin
         */
+        // TODO: this translation back to image-relative coordinates should be moved to a file and imported
         const canvas2 = canvasRef2.current;
         const rect = canvas2.getBoundingClientRect();
         // the height is divided by two because the canvas was scaled in the beginning by 2
         const factor = (canvas2.height / 2) / rect.height;
         const translatedY = factor * y;
 
+        // TODO: settle on either let or const
         let xRelativeToScaledImage = x - centerShiftX.current;
         /* see the corresponding CSS file: canvas1 with the image is restricted to 90% of the height now,
         while canvas2 is not and extends beyond the buttons because restricting canvas2 leads to a weird bug,
         painting the clicks where they were made leads to the points painted in a lower y position */
         let yRelativeToScaledImage = translatedY - centerShiftY.current;
+
         if (xRelativeToScaledImage < currentImage.naturalWidth * currentScale.current && xRelativeToScaledImage >= 0) {
             if (yRelativeToScaledImage < currentImage.naturalHeight * currentScale.current && yRelativeToScaledImage >= 0) {
                 // sending the points relative to the UNSCALED image to the backend; scaling the image in the front-end is only for convenience;
@@ -175,8 +234,9 @@ export default function SegmentationScreen() {
                 const pointJson = {
                     x: xRelativeToScaledImage / currentScale.current, 
                     y: yRelativeToScaledImage / currentScale.current, 
-                    typeOfClick: typeOfClick
+                    type_of_click: typeOfClick
                 };
+                console.log(`pointJson: ${JSON.stringify(pointJson)}`);
                 axios.post(
                     `http://localhost:8000/clicks/`, 
                     pointJson
@@ -209,6 +269,9 @@ export default function SegmentationScreen() {
         }
     }
 
+
+    // used when the user wants to start from scratch
+    // TODO: implement also the option to start from the suggested mask again
     const clearMaskAndPoints = () => {
         // first, notify the backend to reset the mask
         axios.post(
@@ -269,6 +332,7 @@ export default function SegmentationScreen() {
         ctxRef2.current.fill();
 	};
 
+
 	const clearCanvas = () => {
 		ctxRef1.current.clearRect(
 			0,
@@ -292,29 +356,15 @@ export default function SegmentationScreen() {
             return null;
         })
     };
-    
-    const loadImage = async () => {
-        // removing everything
-        clearCanvas();
 
-        // TODO: make sure to accept only .jpeg, .png, .jpg
-        let [fileHandle] = await window.showOpenFilePicker();
-        const file = await fileHandle.getFile();
 
-        const image = new Image();
-
-        // adapted from https://www.educative.io/answers/how-to-build-an-image-preview-using-javascript-filereader
-        const reader = new FileReader();
-        // CONVERTS Image TO BASE 64
-        reader.readAsDataURL(file);
-        // setting the image when loaded and sending it to the backend
-        reader.addEventListener("load", function () {
-            image.src = reader.result;
-            /* reader.result contains the image in Base64 format; removing some additional info and wrapping it in 
-            JSON to send it to the backend */
-            const imageJson = {content: reader.result.split(',')[1]};
-            axios.put("http://localhost:8000/segmentation_image", imageJson);
-            setCurrentImage(image);
+    const nextSegment = () => {
+        // tell the backend to reset clicks and mask
+        // TODO: clear that up, what is exactly being reset
+        axios.post(
+            `http://localhost:8000/reset/`        
+        ).then(() => {
+            setCurrentIndex(prevIndex => {return prevIndex + 1})
         })
     }
 
@@ -336,8 +386,8 @@ export default function SegmentationScreen() {
             <button className="button_segmentation" onClick={rollbackPrevClick} disabled={rollbackDisabled}>
 	        	Remove previous point
 	        </button>
-            <button className="button_segmentation" onClick={loadImage}>
-	        	Load image
+            <button className="button_segmentation" onClick={nextSegment}>
+	        	Next segment
 	        </button>
         </div>
 	);

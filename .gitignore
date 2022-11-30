@@ -8,11 +8,14 @@ env/
 current_mask.png
 prev_mask.png
 
+# exlude current segment
+current_segment.png
+
 # node modules (can be installed based on package.json via npm install)
 node_modules/
 
 # exclude the large models
-mask-rcnn.pth
+model_RGB.pth
 segformerB3_S2_comb.pth
 
 # Byte-compiled / optimized / DLL files

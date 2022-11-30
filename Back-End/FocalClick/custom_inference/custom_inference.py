@@ -22,11 +22,11 @@ def compute_mask(image, clicks, prev_mask, predictor,
     click_list = []
     index = 0
     for click in clicks:
-        if click.typeOfClick == "positive":
+        if click.type_of_click == "positive":
             # note: they use y as the first coordinate, not x!
             # also, rounding is necessary as the model needs unique reference pixels, not floats
             new_click = Click(True, (int(click.y), int(click.x)), indx=index)
-        elif click.typeOfClick == "negative":
+        elif click.type_of_click == "negative":
             new_click = Click(False, (int(click.y), int(click.x)), indx=index)
         else:
             raise RuntimeError("type of click is unknown")
