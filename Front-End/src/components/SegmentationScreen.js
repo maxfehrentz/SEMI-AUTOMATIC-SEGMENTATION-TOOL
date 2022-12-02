@@ -24,7 +24,7 @@ export default function SegmentationScreen() {
     const ctxRef2 = useRef(null);
 
     // state to enable/disable the rollback button; we only allow to rollback one step
-    const [rollbackDisabled, setRollbackDisabled] = useState(false);
+    const [rollbackDisabled, setRollbackDisabled] = useState(true);
     
     // state to track the list of points
     const [points, setPoints] = useState([]);
@@ -35,6 +35,10 @@ export default function SegmentationScreen() {
 
    // state to track the current mask; scale will be the same, if not there will be an exception
    const [currentMask, setCurrentMask] = useState(null);
+
+   // state to track the text on the button to proceeds between segments
+   const [proceedButtonText, setProceedButtonText] = useState("Next segment");
+
 
    // offsets in x and y direction to center the image in the window
    const centerShiftX = useRef(null);
@@ -78,9 +82,26 @@ export default function SegmentationScreen() {
         // when the index changes, the segment changes and we can clean up the screen and reset everything
         clearCanvas();
 
+        /* 
+        when the user works on the last segment (currentIndex is the last index in the ids array), we want
+        to display another text, because by pressing "next" he will finish the segmentation for this image
+        */
+        if (currentIndex === ids.length - 1) {
+            setProceedButtonText("Finish segmentations")
+        }
+        
+
         /*
-        TODO: do sanity check here, because if the currentIndex gets larger than the size of
-        the ids array, we are done with the segmentation. Also, whenever the currentIndex changes
+        the current index indexes into the ids array, basically pointing at the current segment id;
+        when all segments are done, the currentIndex will be equal to the length of the ids array and it is done
+        */
+        if (currentIndex === ids.length) {
+            // TODO: navigate to another screen! because the user is done with all segments
+            return
+        }
+
+        /*
+        TODO: whenever the currentIndex changes
         (except for the initialization), we also want to notify the backend in a separate request
         that we are done and the generated mask can be saved as final!
         */
@@ -95,11 +116,7 @@ export default function SegmentationScreen() {
             const currentImage = new Image();
 
             currentMask.onload = function() {
-                // TODO: this rollback stuff should be done in the useEffect that is triggered right below
-                // this occurs somewhere else as well, make sure to change both
-                if (rollbackDisabled) {
-                    setRollbackDisabled(false);
-                }
+                setRollbackDisabled(true);
                 setCurrentMask(currentMask);
             }
 
@@ -283,6 +300,7 @@ export default function SegmentationScreen() {
             setCurrentMask(_ => {
                 return null;
             })
+            setRollbackDisabled(true);
         })
     }
 
@@ -387,7 +405,7 @@ export default function SegmentationScreen() {
 	        	Remove previous point
 	        </button>
             <button className="button_segmentation" onClick={nextSegment}>
-	        	Next segment
+	        	{proceedButtonText}
 	        </button>
         </div>
 	);
