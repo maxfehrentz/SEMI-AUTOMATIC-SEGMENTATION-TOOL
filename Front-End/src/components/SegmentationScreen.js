@@ -39,7 +39,6 @@ export default function SegmentationScreen() {
    // state to track the text on the button to proceeds between segments
    const [proceedButtonText, setProceedButtonText] = useState("Next segment");
 
-
    // offsets in x and y direction to center the image in the window
    const centerShiftX = useRef(null);
    const centerShiftY = useRef(null);
@@ -89,7 +88,6 @@ export default function SegmentationScreen() {
         if (currentIndex === ids.length - 1) {
             setProceedButtonText("Finish segmentations")
         }
-        
 
         /*
         the current index indexes into the ids array, basically pointing at the current segment id;

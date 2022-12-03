@@ -32,6 +32,9 @@ export default function BoundingScreen() {
  
     // tracking whether or not the user is drawing
     const isDrawing = useRef(false);
+
+    // tracking which box the user is hovering over
+    const [highlightedId, setHighlightedId] = useState(null);
  
     // tracking the origin of a rect while drawing
     const originBoxX = useRef(null);
@@ -97,6 +100,7 @@ export default function BoundingScreen() {
     
             imgHeight = imgHeight*scale;
             imgWidth = imgWidth*scale;
+                       
             // need to divide by two in the end because the whole canvas was scaled by 2
             centerShiftX.current = ((canvas.width / 2) - imgWidth) / 2;
             centerShiftY.current = ((canvas.height / 2) - imgHeight) / 2;
@@ -116,6 +120,29 @@ export default function BoundingScreen() {
             ctx.strokeRect(x, y, width, height);
         }
     }, [boundingBoxes])
+
+
+    useEffect(() => {
+        clearCanvas2();
+
+        // getting the context of the canvas
+        const ctx = ctxRef2.current;
+        ctx.strokeStyle = "red";
+
+        for (const boundingBox of boundingBoxes) {
+            ctx.strokeRect(boundingBox.x, boundingBox.y, boundingBox.width, boundingBox.height);
+            if (boundingBox.id === highlightedId) {
+                ctx.fillStyle = "green";
+                console.log("green");
+            }
+            else {
+                console.log("transparent")
+                ctx.fillStyle = "transparent";
+            }
+            ctx.fillRect(boundingBox.x, boundingBox.y, boundingBox.width, boundingBox.height);
+        }
+
+    }, [highlightedId])
 
 
     /* 
@@ -232,6 +259,7 @@ export default function BoundingScreen() {
     }
 
     const startOrStopDrawingBox = ({nativeEvent}) => {
+        // TODO: make sure that user cannot draw outside of the image
         if (isDrawing.current) {
             stopDrawingBox();
             isDrawing.current = false;
@@ -249,7 +277,6 @@ export default function BoundingScreen() {
             // create entry in the bounding box list
             setBoundingBoxes(prevBoxes => {
                 const id = availableId.current;
-                console.log(`assigning id ${id}`);
                 prevBoxes.push(
                     {
                         x: x, 
@@ -270,14 +297,54 @@ export default function BoundingScreen() {
         availableId.current++;
     })
 
-    const drawBox = (({nativeEvent}) => {
-        if ((!originBoxX.current && !originBoxY.current) || !isDrawing.current) {
-            return;
-        }
+    // either we are drawing a box (clicked before) or we are checking if a box is touched upon
+    const drawOrHighlight = (({nativeEvent}) => {
+
         const {x, y} = nativeEvent;
         const translatedY = translateY(y);
 
-        setBoundingBoxes(prevBoxes => {
+        // when not drawing, check if the user is hovering over a box
+        if (!isDrawing.current) {
+
+            for (const boundingBox of boundingBoxes) {
+                // there can also be negative width and height from the starting x and y coordinates
+                var minBoxX = 0;
+                var maxBoxX = 0;
+                if(boundingBox.width < 0) {
+                    minBoxX = boundingBox.x + boundingBox.width;
+                    maxBoxX = boundingBox.x;
+                }
+                else {
+                    maxBoxX = boundingBox.x + boundingBox.width;
+                    minBoxX = boundingBox.x;
+                }
+
+                var minBoxY = 0;
+                var maxBoxY = 0;
+                if(boundingBox.height < 0) {
+                    minBoxY = boundingBox.y + boundingBox.height;
+                    maxBoxY = boundingBox.y;
+                }
+                else {
+                    minBoxY = boundingBox.y;
+                    maxBoxY = boundingBox.y + boundingBox.height;
+                }
+                    
+                if (x > minBoxX 
+                    && x < maxBoxX
+                    && translatedY > minBoxY
+                    && translatedY < maxBoxY) {
+                    // saving the id so in case the user places a right click, I know which box he wants
+                    setHighlightedId(boundingBox.id);
+                    // we break because if there is overlap, we just want one box to be highlighted
+                    return;
+                }
+            }
+            // if we arrive here, the mouse is not inside any of the boxes
+            setHighlightedId(null);
+        }
+        else {
+            setBoundingBoxes(prevBoxes => {
             const currentBox = prevBoxes.pop();
             const id = currentBox.id;
             if(id !== availableId.current) {
@@ -293,7 +360,8 @@ export default function BoundingScreen() {
                 }
             );
             return [...prevBoxes];
-        })
+            })
+        }
     })
 
 
@@ -340,7 +408,7 @@ export default function BoundingScreen() {
 	        	/>
                 <canvas className="canvas2"
                     onClick={startOrStopDrawingBox}
-                    onMouseMove={drawBox}
+                    onMouseMove={drawOrHighlight}
                     onMouseLeave={stopDrawingBox}
                     ref={canvasRef2}
 	        	/>
