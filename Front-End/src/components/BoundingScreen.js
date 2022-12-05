@@ -476,7 +476,10 @@ export default function BoundingScreen() {
             <div className="canvasContainer" onContextMenu={e => {
                         e.preventDefault();
                         setAnchorPoint({ x: e.clientX, y: e.clientY });
-                        toggleMenu(true);
+                        // only showing the menu when the user is hovering over a box
+                        if (highlightedId !== null) {
+                            toggleMenu(true);
+                        }
                     }}>
                     <ControlledMenu {...menuProps} anchorPoint={anchorPoint}
                     direction="right" onClose={() => toggleMenu(false)}
