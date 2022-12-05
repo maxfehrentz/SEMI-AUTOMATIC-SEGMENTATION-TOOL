@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import './BoundingScreen.css';
 import axios from 'axios';
 
+import { ControlledMenu, MenuItem, useMenuState } from '@szhsin/react-menu';
+import '@szhsin/react-menu/dist/index.css';
+import '@szhsin/react-menu/dist/transitions/slide.css';
+
 /*
  TODO: figure out how to deal with all the code duplication (e.g. for loading the image; maybe those hooks
     can be generalized and moved to separate files)
@@ -133,10 +137,8 @@ export default function BoundingScreen() {
             ctx.strokeRect(boundingBox.x, boundingBox.y, boundingBox.width, boundingBox.height);
             if (boundingBox.id === highlightedId) {
                 ctx.fillStyle = "green";
-                console.log("green");
             }
             else {
-                console.log("transparent")
                 ctx.fillStyle = "transparent";
             }
             ctx.fillRect(boundingBox.x, boundingBox.y, boundingBox.width, boundingBox.height);
@@ -235,7 +237,6 @@ export default function BoundingScreen() {
                         */
                         newBoxes = prevBoxes.concat(newBoxes);
                         availableId.current = newBoxes.length;
-                        console.log(`set available id to ${availableId.current}`);
 
                         return [...newBoxes];
                     })
@@ -399,10 +400,53 @@ export default function BoundingScreen() {
         });
     }
 
+    const [menuProps, toggleMenu] = useMenuState();
+    const [anchorPoint, setAnchorPoint] = useState({ x: 0, y: 0 });
+
+    const removeBox = () => {
+        console.log(`current selected box: ${highlightedId}`);
+        // null evaluates to false
+        if(!highlightedId) {
+            return;
+        }
+        setBoundingBoxes(prevBoxes => {
+            const newBoxes = [];
+            for (const box of prevBoxes) {
+                if(!(box.id === highlightedId)) {
+                    console.log("adding box to the new boxes")
+                    newBoxes.push(box);
+                }
+                else {
+                    console.log("ignoring box");
+                }
+            }
+            return newBoxes;
+        })
+    }
+
+    const moveBox = () => {
+        console.log("move box");
+    }
+
+    const rescaleBox = () => {
+        console.log("rescale box");
+    }
+
 
 	return (
-        <div className="fullScreen">
-            <div className="canvasContainer">
+        <div className="fullScreen">        
+            <div className="canvasContainer" onContextMenu={e => {
+                        e.preventDefault();
+                        setAnchorPoint({ x: e.clientX, y: e.clientY });
+                        toggleMenu(true);
+                    }}>
+                    <ControlledMenu {...menuProps} anchorPoint={anchorPoint}
+                    direction="right" onClose={() => toggleMenu(false)}
+                    >
+                        <MenuItem onClick={removeBox}>Remove</MenuItem>
+                        <MenuItem onClick={moveBox}>Move</MenuItem>
+                        <MenuItem onClick={rescaleBox}>Rescale</MenuItem>
+                    </ControlledMenu>
 	        	<canvas className="canvas1"
                     ref={canvasRef1}
 	        	/>
@@ -411,7 +455,7 @@ export default function BoundingScreen() {
                     onMouseMove={drawOrHighlight}
                     onMouseLeave={stopDrawingBox}
                     ref={canvasRef2}
-	        	/>
+                />
             </div>
             <button className="button_bounding" onClick={loadImage}>
 	        	Load image
