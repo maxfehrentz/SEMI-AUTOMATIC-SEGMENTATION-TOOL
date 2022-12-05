@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import './BoundingScreen.css';
 import axios from 'axios';
 
+// for details see https://szhsin.github.io/react-menu/
 import { ControlledMenu, MenuItem, useMenuState } from '@szhsin/react-menu';
 import '@szhsin/react-menu/dist/index.css';
 import '@szhsin/react-menu/dist/transitions/slide.css';
@@ -36,6 +37,9 @@ export default function BoundingScreen() {
  
     // tracking whether or not the user is drawing
     const isDrawing = useRef(false);
+
+    // tracking whether or not the user is moving a box and which one; null represents that no movement atm
+    const indexOfMovingBox = useRef(null);
 
     // tracking which box the user is hovering over
     const [highlightedId, setHighlightedId] = useState(null);
@@ -134,13 +138,17 @@ export default function BoundingScreen() {
         ctx.strokeStyle = "red";
 
         for (const boundingBox of boundingBoxes) {
+            // simply drawing the bounding box again
             ctx.strokeRect(boundingBox.x, boundingBox.y, boundingBox.width, boundingBox.height);
+
+            // if it is the bounding box that is being hovered over, fill it with transparent red color
             if (boundingBox.id === highlightedId) {
-                ctx.fillStyle = "green";
+                ctx.fillStyle = "rgba( 255, 0, 0, 0.3 )";
             }
             else {
                 ctx.fillStyle = "transparent";
             }
+
             ctx.fillRect(boundingBox.x, boundingBox.y, boundingBox.width, boundingBox.height);
         }
 
@@ -259,11 +267,16 @@ export default function BoundingScreen() {
         return translatedY
     }
 
-    const startOrStopDrawingBox = ({nativeEvent}) => {
+    const onLeftClick = ({nativeEvent}) => {
         // TODO: make sure that user cannot draw outside of the image
         if (isDrawing.current) {
             stopDrawingBox();
             isDrawing.current = false;
+        }
+        else if (indexOfMovingBox.current !== null) {
+            // this process was started by chosing "Move" in the right click custom context menu
+            // the left click now stops the movement
+            indexOfMovingBox.current = null;
         }
         // only allow drawing if there is an image set
         else if (currentImage) {
@@ -298,14 +311,28 @@ export default function BoundingScreen() {
         availableId.current++;
     })
 
-    // either we are drawing a box (clicked before) or we are checking if a box is touched upon
-    const drawOrHighlight = (({nativeEvent}) => {
+    // either we are drawing a box (clicked before), checking if a box is hovered over, or move a box
+    const onMouseMove = (({nativeEvent}) => {
 
         const {x, y} = nativeEvent;
         const translatedY = translateY(y);
 
-        // when not drawing, check if the user is hovering over a box
-        if (!isDrawing.current) {
+        // moving a box
+        if(indexOfMovingBox.current !== null) {
+            setBoundingBoxes(prevBoxes => {
+                const movingBox = prevBoxes[indexOfMovingBox.current]
+                prevBoxes[indexOfMovingBox.current] = {
+                    x: x - (movingBox.width / 2), 
+                    y: translatedY - (movingBox.height / 2), 
+                    width: movingBox.width, 
+                    height: movingBox.height,
+                    id: movingBox.id
+                };
+                return [...prevBoxes];
+            })
+        }
+        // when not moving a box or drawing, check if the user is hovering over a box
+        else if (!isDrawing.current) {
 
             for (const boundingBox of boundingBoxes) {
                 // there can also be negative width and height from the starting x and y coordinates
@@ -344,6 +371,8 @@ export default function BoundingScreen() {
             // if we arrive here, the mouse is not inside any of the boxes
             setHighlightedId(null);
         }
+
+        // this is the case that the user is drawing
         else {
             setBoundingBoxes(prevBoxes => {
             const currentBox = prevBoxes.pop();
@@ -400,13 +429,12 @@ export default function BoundingScreen() {
         });
     }
 
+
     const [menuProps, toggleMenu] = useMenuState();
     const [anchorPoint, setAnchorPoint] = useState({ x: 0, y: 0 });
 
     const removeBox = () => {
-        console.log(`current selected box: ${highlightedId}`);
-        // null evaluates to false
-        if(!highlightedId) {
+        if(highlightedId === null) {
             return;
         }
         setBoundingBoxes(prevBoxes => {
@@ -425,7 +453,17 @@ export default function BoundingScreen() {
     }
 
     const moveBox = () => {
-        console.log("move box");
+        var index = 0;
+        for (const box of boundingBoxes) {
+            console.log(JSON.stringify(box));
+            const {x, y, width, height, id} = box;
+            if (id === highlightedId) {
+                indexOfMovingBox.current = index;
+            }
+            else {
+                index++;
+            }
+        }
     }
 
     const rescaleBox = () => {
@@ -451,8 +489,9 @@ export default function BoundingScreen() {
                     ref={canvasRef1}
 	        	/>
                 <canvas className="canvas2"
-                    onClick={startOrStopDrawingBox}
-                    onMouseMove={drawOrHighlight}
+                    onClick={onLeftClick}
+                    onMouseMove={onMouseMove}
+                    // TODO: figure this behavior out, there is a bug
                     onMouseLeave={stopDrawingBox}
                     ref={canvasRef2}
                 />
