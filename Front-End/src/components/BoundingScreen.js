@@ -41,6 +41,17 @@ export default function BoundingScreen() {
     // tracking whether or not the user is moving a box and which one; null represents that no movement atm
     const indexOfMovingBox = useRef(null);
 
+    // tracking which box is being rescaled and where
+    const [indexOfScalingBox, setIndexOfScalingBox] = useState(null);
+    // those four Refs will store the corner coordinates for comparison with a click later on
+    const topLeft = useRef(null);
+    const topRight = useRef(null);
+    const bottomLeft = useRef(null);
+    const bottomRight = useRef(null);
+    // values: "topleft", "topright", "bottomleft", "bottomright"
+    // TODO: solve this more elegantly
+    const cornerOfScalingBox = useRef(null);
+
     // tracking which box the user is hovering over
     const [highlightedId, setHighlightedId] = useState(null);
  
@@ -143,7 +154,37 @@ export default function BoundingScreen() {
 
             // if it is the bounding box that is being hovered over, fill it with transparent red color
             if (boundingBox.id === highlightedId) {
+
+                // if the user is rescaling, highlight the corners of the highlighted box
+                if(indexOfScalingBox !== null) {
+                    // TODO: move those constants into a separate constants file
+                    const radius = 5;
+                    ctx.fillStyle = "rgba( 255, 0, 0, 0.6 )";
+                    
+                    ctx.beginPath();
+                    console.log(`top left x: ${topLeft.current.x}`);
+                    console.log(`top left y: ${topLeft.current.y}`);
+                    ctx.arc(topLeft.current.x, topLeft.current.y, radius, 0, 2 * Math.PI, false);
+                    ctx.fill();
+                    
+                    ctx.beginPath();
+                    console.log(`top right x: ${topRight.current.x}`);
+                    console.log(`top right y: ${topRight.current.y}`);
+                    ctx.arc(topRight.current.x, topRight.current.y, radius, 0, 2 * Math.PI, false);
+                    ctx.fill();
+                    
+                    ctx.beginPath();
+                    ctx.arc(bottomLeft.current.x, bottomLeft.current.y, radius, 0, 2 * Math.PI, false);
+                    ctx.fill();
+                    
+                    ctx.beginPath();
+                    ctx.arc(bottomRight.current.x, bottomRight.current.y, radius, 0, 2 * Math.PI, false);
+                    ctx.fill();
+                    
+                }
+
                 ctx.fillStyle = "rgba( 255, 0, 0, 0.3 )";
+
             }
             else {
                 ctx.fillStyle = "transparent";
@@ -152,7 +193,7 @@ export default function BoundingScreen() {
             ctx.fillRect(boundingBox.x, boundingBox.y, boundingBox.width, boundingBox.height);
         }
 
-    }, [highlightedId])
+    }, [highlightedId, indexOfScalingBox])
 
 
     /* 
@@ -268,6 +309,9 @@ export default function BoundingScreen() {
     }
 
     const onLeftClick = ({nativeEvent}) => {
+        const {x, y} = nativeEvent;
+        const translatedY = translateY(y);
+
         // TODO: make sure that user cannot draw outside of the image
         if (isDrawing.current) {
             stopDrawingBox();
@@ -278,12 +322,65 @@ export default function BoundingScreen() {
             // the left click now stops the movement
             indexOfMovingBox.current = null;
         }
+        else if (indexOfScalingBox !== null) {
+            // if the user already chose a corner before, this second click finishes the process
+            // TODO: this is duplicate code from the else statement below, maybe move
+            if(cornerOfScalingBox.current !== null) {
+                console.log("setting everything back to null");
+                setIndexOfScalingBox(null);
+                cornerOfScalingBox.current = null;
+                topLeft.current = null;
+                topRight.current = null;
+                bottomLeft.current = null;
+                bottomRight.current = null;
+                return;
+            }
+
+            // the process was started by chosing "Scale" in the right click custom context menu
+            // checking if the user clicked close to one of the corners
+            // TODO: move tolerance to a constant file
+            const tolerance = 5;
+            if(-tolerance < x - topLeft.current.x && 
+                x - topLeft.current.x < tolerance &&
+                -tolerance < translatedY - topLeft.current.y &&
+                translatedY - topLeft.current.y < tolerance) {
+                // user clicked on the topleft corner
+                cornerOfScalingBox.current = "topLeft";
+            }
+            else if(-tolerance < x - topRight.current.x && 
+                x - topRight.current.x < tolerance &&
+                -tolerance < translatedY - topRight.current.y &&
+                translatedY - topRight.current.y < tolerance) {
+                // user clicked on the topright corner
+                cornerOfScalingBox.current = "topRight";
+            }
+            else if(-tolerance < x - bottomLeft.current.x && 
+                x - bottomLeft.current.x < tolerance &&
+                -tolerance < translatedY - bottomLeft.current.y &&
+                translatedY - bottomLeft.current.y < tolerance) {
+                // user clicked on the bottom left corner
+                cornerOfScalingBox.current = "bottomLeft";
+            }
+            else if(-tolerance < x - bottomRight.current.x && 
+                x - bottomRight.current.x < tolerance &&
+                -tolerance < translatedY - bottomRight.current.y &&
+                translatedY - bottomRight.current.y < tolerance) {
+                // user clicked on the bottom right corner
+                cornerOfScalingBox.current = "bottomRight";
+            }
+            else {
+                // the user clicked somewhere else, we stop the scaling process
+                setIndexOfScalingBox(null);
+                cornerOfScalingBox.current = null;
+                topLeft.current = null;
+                topRight.current = null;
+                bottomLeft.current = null;
+                bottomRight.current = null;
+            }
+        }
         // only allow drawing if there is an image set
         else if (currentImage) {
             isDrawing.current = true;
-            
-            const {x, y} = nativeEvent;
-            const translatedY = translateY(y);
 
             originBoxX.current = x;
             originBoxY.current = translatedY;
@@ -331,7 +428,72 @@ export default function BoundingScreen() {
                 return [...prevBoxes];
             })
         }
-        // when not moving a box or drawing, check if the user is hovering over a box
+        // rescaling a box
+        else if(indexOfScalingBox !== null) {
+
+            // check if the user has clicked a corner already
+            if(cornerOfScalingBox.current !== null) {
+                const boxId = boundingBoxes[indexOfScalingBox].id;
+
+                if (cornerOfScalingBox.current === "topLeft") {
+                    // "anchor" during the scaling is bottom right
+                    setBoundingBoxes(prevBoxes => {
+                        prevBoxes[indexOfScalingBox] = {
+                            x: bottomRight.current.x, 
+                            y: bottomRight.current.y, 
+                            width: x - bottomRight.current.x, 
+                            height: translatedY - bottomRight.current.y,
+                            id: boxId
+                        }
+                        return [...prevBoxes];
+                    })
+                }
+                else if (cornerOfScalingBox.current === "topRight") {
+                    // "anchor" during the scaling is bottom left
+                    setBoundingBoxes(prevBoxes => {
+                        prevBoxes[indexOfScalingBox] = {
+                            x: bottomLeft.current.x, 
+                            y: bottomLeft.current.y, 
+                            width: x - bottomLeft.current.x, 
+                            height: translatedY - bottomLeft.current.y,
+                            id: boxId
+                        }
+                        return [...prevBoxes];
+                    })
+                }
+                else if (cornerOfScalingBox.current === "bottomLeft") {
+                    // "anchor" during the scaling is top right
+                    setBoundingBoxes(prevBoxes => {
+                        prevBoxes[indexOfScalingBox] = {
+                            x: topRight.current.x, 
+                            y: topRight.current.y, 
+                            width: x - topRight.current.x, 
+                            height: translatedY - topRight.current.y,
+                            id: boxId
+                        }
+                        return [...prevBoxes];
+                    })
+                }
+                else if (cornerOfScalingBox.current === "bottomRight") {
+                    // "anchor" during the scaling is top left
+                    setBoundingBoxes(prevBoxes => {
+                        prevBoxes[indexOfScalingBox] = {
+                            x: topLeft.current.x, 
+                            y: topLeft.current.y, 
+                            width: x - topLeft.current.x, 
+                            height: translatedY - topLeft.current.y,
+                            id: boxId
+                        }
+                        return [...prevBoxes];
+                    })
+                }
+                else {
+                    console.log("the chosen corner does not exist")
+                }
+            }
+
+        }
+        // when not moving a box or rescaling or drawing, check if the user is hovering over a box
         else if (!isDrawing.current) {
 
             for (const boundingBox of boundingBoxes) {
@@ -455,7 +617,6 @@ export default function BoundingScreen() {
     const moveBox = () => {
         var index = 0;
         for (const box of boundingBoxes) {
-            console.log(JSON.stringify(box));
             const {x, y, width, height, id} = box;
             if (id === highlightedId) {
                 indexOfMovingBox.current = index;
@@ -467,7 +628,46 @@ export default function BoundingScreen() {
     }
 
     const rescaleBox = () => {
-        console.log("rescale box");
+        var index = 0;
+        for (const box of boundingBoxes) {
+            const {x, y, width, height, id} = box;
+            if (id === highlightedId) {
+                setIndexOfScalingBox(index);
+                // since there is also negative height and width, several checks are necessary
+                if(width < 0) {
+                    if(height < 0) {
+                        topLeft.current = {x: x + width, y: y + height};
+                        topRight.current = {x: x, y: y + height};
+                        bottomLeft.current = {x: x + width, y: y};
+                        bottomRight.current = {x: x, y: y};
+                    }
+                    else {
+                        topLeft.current = {x: x + width, y: y};
+                        topRight.current = {x: x, y: y};
+                        bottomLeft.current = {x: x + width, y: y + height};
+                        bottomRight.current = {x: x, y: y + height};
+                    }
+                }
+                else {
+                    if(height < 0) {
+                        topLeft.current = {x: x, y: y + height};
+                        topRight.current = {x: x + width, y: y + height};
+                        bottomLeft.current = {x: x, y: y};
+                        bottomRight.current = {x: x + width, y: y};
+                    }
+                    else {
+                        topLeft.current = {x: x, y: y};
+                        topRight.current = {x: x + width, y: y};
+                        bottomLeft.current = {x: x, y: y + height};
+                        bottomRight.current = {x: x + width, y: y + height};
+                    }
+                }
+            }
+            else {
+                index++;
+            }
+        }
+
     }
 
 
