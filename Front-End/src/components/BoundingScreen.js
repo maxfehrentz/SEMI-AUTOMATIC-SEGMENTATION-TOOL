@@ -339,7 +339,7 @@ export default function BoundingScreen() {
             // the process was started by chosing "Scale" in the right click custom context menu
             // checking if the user clicked close to one of the corners
             // TODO: move tolerance to a constant file
-            const tolerance = 5;
+            const tolerance = 10;
             if(-tolerance < x - topLeft.current.x && 
                 x - topLeft.current.x < tolerance &&
                 -tolerance < translatedY - topLeft.current.y &&

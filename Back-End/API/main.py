@@ -81,7 +81,7 @@ class BoundingBoxList(BaseModel):
 
 # class to interface with the mask-rcnn
 class ROI():
-    def __init__(self, bounding_box: torch.Tensor, suggested_mask: torch.Tensor):
+    def __init__(self, bounding_box: torch.Tensor, suggested_mask: torch.Tensor = None):
         # each bounding box is represented by the lower left and the upper right corner: x1, y1, x2, y2
         self.bounding_box = bounding_box
         self.suggested_mask = suggested_mask
@@ -347,6 +347,36 @@ async def roll_back_click():
         raise HTTPException(status_code=404, detail="No previous mask available")
 
 
+def add_bounding_box_to_rois(box):
+    x = 0
+    limit_x = 0
+    if box.width > 0:
+        x = box.x
+        limit_x = box.x + box.width
+    else:
+        x = box.x + box.width
+        limit_x = box.x
+
+    y = 0
+    limit_y = 0
+    if box.height > 0:
+        y = box.y
+        limit_y = box.y + box.height
+    else:
+        y = box.y + box.height
+        limit_y = box.y
+
+    rois[box.id] = ROI(
+        bounding_box = torch.tensor([
+            x, 
+            y, 
+            limit_x,
+            limit_y]))
+
+    return
+
+
+
 @app.put("/bounding-boxes")
 async def save_bounding_boxes_from_frontend(bounding_box_list: BoundingBoxList):
 
@@ -378,27 +408,23 @@ async def save_bounding_boxes_from_frontend(bounding_box_list: BoundingBoxList):
                 # moreover, we do not pass a mask, which then defaults to None; this removes the initally
                 # suggested mask on purpose, because since the bounding box has been changed,
                 # we cannot trust the mask either
-                rois[frontend_box.id] = ROI(
-                    bounding_box = tf.constant([
-                        frontend_box.x, 
-                        frontend_box.y, 
-                        frontend_box.x + frontend_box.width,
-                        frontend_box.y + frontend_box.height])
-                    )
+                add_bounding_box_to_rois(frontend_box)
 
         # boxes that are not in the rois have been added in the frontend and therefore also have no mask
         else:
-            print(f"new bounding box with id {bounding_box.id}")
-            rois[frontend_box.id] = ROI(
-                    bounding_box = tf.constant([
-                        frontend_box.x, 
-                        frontend_box.y, 
-                        frontend_box.x + frontend_box.width,
-                        frontend_box.y + frontend_box.height])
-                    )
+            add_bounding_box_to_rois(frontend_box)
 
-        # TODO: IMPORTANT: loop over the keys (ids) and remove the bounding boxes from the rois dict, that were not
-        # returned from the frontend, since that means they have been removed by the user
+
+    # loop over the keys (ids) and remove the bounding boxes from the rois dict, that were not
+    # returned from the frontend, since that means they have been removed by the user
+    keys_to_be_removed = []
+
+    for key in rois.keys():
+        if key not in map(lambda box: box.id, bounding_box_list.bounding_boxes):
+            keys_to_be_removed.append(key)
+
+    for key in keys_to_be_removed:
+        del rois[key]
 
     return
 
@@ -407,6 +433,7 @@ async def save_bounding_boxes_from_frontend(bounding_box_list: BoundingBoxList):
 async def get_segment_with(id: int):
     
     # TODO: do error handling here in case nonsense ids are being passed
+    print(f"id requested: {id}")
 
     x_origin = int(rois.get(id).bounding_box[0])
     y_origin = int(rois.get(id).bounding_box[1])
