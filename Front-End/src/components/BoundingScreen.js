@@ -21,6 +21,9 @@ export default function BoundingScreen() {
     const ctxRef1 = useRef(null);
     const ctxRef2 = useRef(null);
 
+    // state that indicates whether the user has to wait for a response from the backend
+    const [loading, setLoading] = useState(false);
+
     // track the current image and by which factor it was scaled
     const [currentImage, setCurrentImage] = useState(null);
     const currentScale = useRef(null);
@@ -257,6 +260,8 @@ export default function BoundingScreen() {
             JSON to send it to the backend */
             const imageJson = {content: reader.result.split(',')[1]};
 
+            setLoading(true);
+
             // sending the image to the backend and receive the bounding boxes
             axios.put("http://localhost:8000/bounding-image", imageJson).then(
                 response => {
@@ -286,6 +291,9 @@ export default function BoundingScreen() {
                         */
                         newBoxes = prevBoxes.concat(newBoxes);
                         availableId.current = newBoxes.length;
+
+                        // loading can stop
+                        setLoading(false);
 
                         return [...newBoxes];
                     })
@@ -672,7 +680,13 @@ export default function BoundingScreen() {
 
 
 	return (
-        <div className="fullScreen">        
+        <div className="fullScreen"> 
+            {/* taken from https://stackabuse.com/how-to-create-a-loading-animation-in-react-from-scratch/ */}
+            {loading &&
+            <div className="loader-container">
+                <div className="spinner"></div>
+            </div>   
+            } 
             <div className="canvasContainer" onContextMenu={e => {
                         e.preventDefault();
                         setAnchorPoint({ x: e.clientX, y: e.clientY });
