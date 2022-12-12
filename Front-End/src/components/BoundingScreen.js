@@ -8,6 +8,10 @@ import { ControlledMenu, MenuItem, useMenuState } from '@szhsin/react-menu';
 import '@szhsin/react-menu/dist/index.css';
 import '@szhsin/react-menu/dist/transitions/slide.css';
 
+// taken from https://mui.com/material-ui/
+import Slider from '@mui/material/Slider';
+
+
 /*
  TODO: figure out how to deal with all the code duplication (e.g. for loading the image; maybe those hooks
     can be generalized and moved to separate files)
@@ -24,9 +28,11 @@ export default function BoundingScreen() {
     // state that indicates whether the user has to wait for a response from the backend
     const [loading, setLoading] = useState(false);
 
-    // track the current image and by which factor it was scaled
+    // track the current image, by which factor it was scaled, and the brightness
     const [currentImage, setCurrentImage] = useState(null);
     const currentScale = useRef(null);
+    // 100% is the standard inherent image brightness
+    const [brightness, setBrightness] = useState(100); 
  
     // track the bounding boxes
     const [boundingBoxes, setBoundingBoxes] = useState([]);
@@ -126,9 +132,11 @@ export default function BoundingScreen() {
             // need to divide by two in the end because the whole canvas was scaled by 2
             centerShiftX.current = ((canvas.width / 2) - imgWidth) / 2;
             centerShiftY.current = ((canvas.height / 2) - imgHeight) / 2;
+            // value ranges from 25% to 175%; 100% is normal
+            ctx.filter = `brightness(${brightness}%)`;
             ctx.drawImage(currentImage, 0, 0, naturalWidth, naturalHeight, centerShiftX.current, centerShiftY.current, imgWidth, imgHeight);
         // })
-    }, [currentImage])
+    }, [currentImage, brightness])
 
 
     useEffect(() => {
@@ -306,13 +314,16 @@ export default function BoundingScreen() {
     const navigate = useNavigate();
 
     // need to adjust for squishing on the y-axis, see SegmentationScreen.js for more explanation on this
+    // also need to adjust for the offset on the y-axis caused by the sliders on top!
     // TODO: also implement this for x; there might be images wider than the screen at some point
     const translateY = (y) => {
         const canvas2 = canvasRef2.current;
         const rect = canvas2.getBoundingClientRect();
+        // mouse is relative to the whole screen while we need it to be relative to the image canvas
+        const yOffset = rect.y;
         // the height is divided by two because the canvas was scaled in the beginning by 2
         const factor = (canvas2.height / 2) / rect.height;
-        const translatedY = factor * y;
+        const translatedY = factor * (y - yOffset);
         return translatedY
     }
 
@@ -334,7 +345,6 @@ export default function BoundingScreen() {
             // if the user already chose a corner before, this second click finishes the process
             // TODO: this is duplicate code from the else statement below, maybe move
             if(cornerOfScalingBox.current !== null) {
-                console.log("setting everything back to null");
                 setIndexOfScalingBox(null);
                 cornerOfScalingBox.current = null;
                 topLeft.current = null;
@@ -678,6 +688,10 @@ export default function BoundingScreen() {
 
     }
 
+    const brightnessChanged = (_, newValue) => {
+        setBrightness(newValue);
+    }
+
 
 	return (
         <div className="fullScreen"> 
@@ -687,6 +701,17 @@ export default function BoundingScreen() {
                 <div className="spinner"></div>
             </div>   
             } 
+            <div className = "sliderContainer">
+                <Slider
+                    onChangeCommitted={brightnessChanged}
+                    orientation="horizontal"
+                    defaultValue={100}
+                    min={25}
+                    max={175}
+                    aria-label="brightness"
+                    valueLabelDisplay="off"
+                />
+            </div>
             <div className="canvasContainer" onContextMenu={e => {
                         e.preventDefault();
                         setAnchorPoint({ x: e.clientX, y: e.clientY });
@@ -702,16 +727,16 @@ export default function BoundingScreen() {
                         <MenuItem onClick={moveBox}>Move</MenuItem>
                         <MenuItem onClick={rescaleBox}>Rescale</MenuItem>
                     </ControlledMenu>
-	        	<canvas className="canvas1"
-                    ref={canvasRef1}
-	        	/>
-                <canvas className="canvas2"
-                    onClick={onLeftClick}
-                    onMouseMove={onMouseMove}
-                    // TODO: figure this behavior out, there is a bug
-                    onMouseLeave={stopDrawingBox}
-                    ref={canvasRef2}
-                />
+	        	    <canvas className="canvas1"
+                        ref={canvasRef1}
+	        	    />
+                    <canvas className="canvas2"
+                        onClick={onLeftClick}
+                        onMouseMove={onMouseMove}
+                        // TODO: figure this behavior out, there is a bug
+                        onMouseLeave={stopDrawingBox}
+                        ref={canvasRef2}
+                    />
             </div>
             <button className="button_bounding" onClick={loadImage}>
 	        	Load image
