@@ -3,6 +3,9 @@ import './SegmentationScreen.css';
 import axios from 'axios';
 import { useParams } from 'react-router-dom';
 
+// taken from https://mui.com/material-ui/
+import Slider from '@mui/material/Slider';
+
 
 export default function SegmentationScreen() {
 
@@ -32,9 +35,13 @@ export default function SegmentationScreen() {
     // state to track the current image and by which factor it was scaled
    const [currentImage, setCurrentImage] = useState(null);
    const currentScale = useRef(null);
+   // 100% is the standard inherent image brightness
+   const [brightness, setBrightness] = useState(100); 
 
    // state to track the current mask; scale will be the same, if not there will be an exception
    const [currentMask, setCurrentMask] = useState(null);
+   // opacity of the mask
+   const [opacity, setOpacity] = useState(75);
 
    // state to track the text on the button to proceeds between segments
    const [proceedButtonText, setProceedButtonText] = useState("Next segment");
@@ -137,6 +144,10 @@ export default function SegmentationScreen() {
     
 
     useEffect(() => {
+        /* 
+        TODO: maybe cleaning should not be here? was very hard to debug why the canvas is being cleaned
+        settle on one place where those kind of UI updates are made
+        */
         ctxRef2.current.clearRect(
 			0,
 			0,
@@ -150,10 +161,11 @@ export default function SegmentationScreen() {
         for (const point of points) {
            drawPoint(point)
         }
-      }, [points])
+      }, [points, opacity])
 
 
     useEffect(() => {
+        // TODO: code duplication with BoundingScreen.js; find better solution
         if (!currentImage) {
             return;
         }
@@ -182,8 +194,9 @@ export default function SegmentationScreen() {
         // need to divide by two in the end because the whole canvas was scaled by 2
         centerShiftX.current = ((canvas.width / 2) - imgWidth) / 2;
         centerShiftY.current = ((canvas.height / 2) - imgHeight) / 2;
+        ctx.filter = `brightness(${brightness}%)`;
         ctx.drawImage(currentImage, 0, 0, naturalWidth, naturalHeight, centerShiftX.current, centerShiftY.current, imgWidth, imgHeight);
-    }, [currentImage])
+    }, [currentImage, brightness])
 
 
     useEffect(() => {
@@ -191,6 +204,7 @@ export default function SegmentationScreen() {
             return;
         }
         const ctx = ctxRef2.current;
+        ctx.filter = `opacity(${opacity}%)`;
         ctx.drawImage(
             currentMask, 
             0, 
@@ -202,7 +216,7 @@ export default function SegmentationScreen() {
             currentMask.naturalWidth * currentScale.current, 
             currentMask.naturalHeight * currentScale.current
         );
-    }, [currentMask])
+    }, [currentMask, opacity])
 
 
     const addPositivePoint = ({nativeEvent}) => {
@@ -231,16 +245,17 @@ export default function SegmentationScreen() {
         // TODO: this translation back to image-relative coordinates should be moved to a file and imported
         const canvas2 = canvasRef2.current;
         const rect = canvas2.getBoundingClientRect();
+        // the mouse is relative to the whole screen; therefore there is an offset caused by the sliders on top
+        const offsetY = rect.y;
         // the height is divided by two because the canvas was scaled in the beginning by 2
         const factor = (canvas2.height / 2) / rect.height;
-        const translatedY = factor * y;
+        const translatedY = factor * (y - offsetY);
 
-        // TODO: settle on either let or const
-        let xRelativeToScaledImage = x - centerShiftX.current;
+        const xRelativeToScaledImage = x - centerShiftX.current;
         /* see the corresponding CSS file: canvas1 with the image is restricted to 90% of the height now,
         while canvas2 is not and extends beyond the buttons because restricting canvas2 leads to a weird bug,
         painting the clicks where they were made leads to the points painted in a lower y position */
-        let yRelativeToScaledImage = translatedY - centerShiftY.current;
+        const yRelativeToScaledImage = translatedY - centerShiftY.current;
 
         if (xRelativeToScaledImage < currentImage.naturalWidth * currentScale.current && xRelativeToScaledImage >= 0) {
             if (yRelativeToScaledImage < currentImage.naturalHeight * currentScale.current && yRelativeToScaledImage >= 0) {
@@ -251,7 +266,6 @@ export default function SegmentationScreen() {
                     y: yRelativeToScaledImage / currentScale.current, 
                     type_of_click: typeOfClick
                 };
-                console.log(`pointJson: ${JSON.stringify(pointJson)}`);
                 axios.post(
                     `http://localhost:8000/clicks/`, 
                     pointJson
@@ -289,15 +303,14 @@ export default function SegmentationScreen() {
     // TODO: implement also the option to start from the suggested mask again
     const clearMaskAndPoints = () => {
         // first, notify the backend to reset the mask
+        // TODO: think about those resets again
         axios.post(
             `http://localhost:8000/reset/`        
         ).then(() => {
             setPoints(prevPoints => {
                 return [];
             })
-            setCurrentMask(_ => {
-                return null;
-            })
+            setCurrentMask(null);
             setRollbackDisabled(true);
         })
     }
@@ -384,8 +397,36 @@ export default function SegmentationScreen() {
         })
     }
 
+    const brightnessChanged = (_, newValue) => {
+        setBrightness(newValue);
+    }
+
+    const opacityChanged = (_, newValue) => {
+        setOpacity(newValue);
+    }
+
 	return (
         <div className="fullScreen">
+            <div className = "sliderContainer">
+                <Slider
+                    onChangeCommitted={brightnessChanged}
+                    orientation="horizontal"
+                    defaultValue={100}
+                    min={25}
+                    max={175}
+                    aria-label="brightness"
+                    valueLabelDisplay="off"
+                />
+                <Slider
+                    onChangeCommitted={opacityChanged}
+                    orientation="horizontal"
+                    defaultValue={75}
+                    min={50}
+                    max={100}
+                    aria-label="opacity"
+                    valueLabelDisplay="off"
+                />
+            </div>
             <div className="canvasContainer">
 	        	<canvas className="canvas1"
                     ref={canvasRef1}

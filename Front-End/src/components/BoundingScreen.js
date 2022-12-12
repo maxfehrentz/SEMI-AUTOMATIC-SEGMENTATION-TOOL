@@ -314,7 +314,7 @@ export default function BoundingScreen() {
     const navigate = useNavigate();
 
     // need to adjust for squishing on the y-axis, see SegmentationScreen.js for more explanation on this
-    // also need to adjust for the offset on the y-axis caused by the sliders on top!
+    // also need to adjust for the offset on the y-axis caused by the slider on top!
     // TODO: also implement this for x; there might be images wider than the screen at some point
     const translateY = (y) => {
         const canvas2 = canvasRef2.current;
