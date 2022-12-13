@@ -1,4 +1,5 @@
 import { React, useEffect, useRef, useState } from 'react';
+import './SharedStyles.css';
 import './SegmentationScreen.css';
 import axios from 'axios';
 import { useParams } from 'react-router-dom';

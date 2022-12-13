@@ -1,5 +1,6 @@
 import { React, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import './SharedStyles.css';
 import './BoundingScreen.css';
 import axios from 'axios';
 

@@ -1,39 +1,3 @@
-.fullScreen{
-    position: absolute;
-    /* background-color: black; */
-    width: 100vw;
-    height: 100vh;
-    box-sizing: border-box;
-    border: "3px solid #000";
-    z-index: 3;
-}
-
-.canvasContainer{
-    position: relative;
-    width: 100%;
-    height: 90%;
-    /* background-color: red; */
-    border: "10px solid black";
-    z-index: -1;
-}
-
-.canvas1{
-    position: absolute;
-    /* background-color: blue; */
-    width: 100%;
-    height: 100%;
-    max-height: 100%;
-    z-index: 0;
-}
-.canvas2{
-    position: absolute;
-    /* background-color: green; */
-    width: 100%;
-    height: 100%;
-    max-height: 100%;
-    z-index: 1;
-}
-
 .button_segmentation{
     position: relative;
     float: left;
