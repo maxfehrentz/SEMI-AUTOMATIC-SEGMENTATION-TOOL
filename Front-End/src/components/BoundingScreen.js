@@ -1,5 +1,5 @@
 import { React, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import './SharedStyles.css';
 import './BoundingScreen.css';
 import axios from 'axios';
@@ -28,6 +28,14 @@ export default function BoundingScreen() {
 
     // state that indicates whether the user has to wait for a response from the backend
     const [loading, setLoading] = useState(false);
+
+    // refs to track the files and current index that the user wants to work on
+    const fileHandles = useRef([]);
+    const fileIndex = useRef(0);
+
+    // navigation and state
+    const navigate = useNavigate();
+    const location = useLocation();
 
     // track the current image, by which factor it was scaled, and the brightness
     const [currentImage, setCurrentImage] = useState(null);
@@ -85,6 +93,23 @@ export default function BoundingScreen() {
         ctx2.scale(2, 2);
         ctxRef2.current = ctx2;
 
+        // retrieving state of the navigation
+        const state = location.state;
+        if (state !== null) {
+            const {index, handles} = state;
+            fileIndex.current = index;
+            fileHandles.current = handles;
+        }
+        if(fileIndex.current > 0) {
+            // if we reached the length of the array, all files are handled and we are done here
+            if(fileIndex.current === fileHandles.current.length) {
+                // TODO: navigate to another screen where user is asked in which format to save stuff
+            }
+            else {
+                // loading the next image
+                loadImage(fileHandles.current[fileIndex.current]);
+            }
+        }
 
     }, []);
 
@@ -213,6 +238,7 @@ export default function BoundingScreen() {
     convention where cleaning is happening, e.g. only in hooks, only in custom functions, ...?
     */
 	const clearEverything = () => {
+
 		ctxRef1.current.clearRect(
 			0,
 			0,
@@ -225,12 +251,12 @@ export default function BoundingScreen() {
 			canvasRef2.current.width,
 			canvasRef2.current.height
         );
-        setCurrentImage(_ => {
-            return null;
-        })
-        setBoundingBoxes(_ => {
-            return [];
-        })
+
+        setCurrentImage(null);
+        setBoundingBoxes([]);
+        setHighlightedId(null);
+        setBrightness(100);
+
         availableId.current = 0;
     };
 
@@ -243,16 +269,10 @@ export default function BoundingScreen() {
 			canvasRef2.current.height
         );
     };
-    
 
-    const loadImage = async () => {
-        // removing everything
-        // TODO: find a cleaner solution to make this go hand-in-hand with the resets
-        clearEverything();
+    const loadImage = async (handle) => {
 
-        // TODO: make sure to accept only .jpeg, .png, .jpg
-        let [fileHandle] = await window.showOpenFilePicker();
-        const file = await fileHandle.getFile();
+        const file = await handle.getFile();
 
         const image = new Image();
 
@@ -311,8 +331,22 @@ export default function BoundingScreen() {
             setCurrentImage(image);
         })
     }
+    
 
-    const navigate = useNavigate();
+    const loadFiles = async () => {
+        // removing everything
+        // TODO: find a cleaner solution to make this go hand-in-hand with the resets
+        clearEverything();
+
+        // TODO: make sure to accept only .jpeg, .png, .jpg
+        fileHandles.current = await window.showOpenFilePicker({multiple: true});
+
+        // take the first handle
+        fileIndex.current = 0;
+        loadImage(fileHandles.current[fileIndex.current]);
+
+    }
+
 
     // need to adjust for squishing on the y-axis, see SegmentationScreen.js for more explanation on this
     // also need to adjust for the offset on the y-axis caused by the slider on top!
@@ -601,7 +635,12 @@ export default function BoundingScreen() {
         // send final state of the boxes to the backend
         axios.put("http://localhost:8000/bounding-boxes", boundingBoxesJson).then(_ => {
                 // ignoring the response, bc ending up here means status ok
-                navigate(`/segmentation/${boundingBoxes.map(boundingBox => boundingBox.id)}`);
+                // counting up the index so screen is prepared for the next image
+                fileIndex.current += 1;
+
+                // persist the file handles and the index as state through navigation
+                const state = {index: fileIndex.current, handles: fileHandles.current};
+                navigate(`/segmentation/${boundingBoxes.map(boundingBox => boundingBox.id)}`,{ state: state });
             }
         ).catch(error => {
             console.log(`error with code ${error.response.status} occurred while trying to send the final
@@ -739,8 +778,8 @@ export default function BoundingScreen() {
                         ref={canvasRef2}
                     />
             </div>
-            <button className="button_bounding" onClick={loadImage}>
-	        	Load image
+            <button className="button_bounding" onClick={loadFiles}>
+	        	Load image(s)
 	        </button>
             <button className="button_bounding" onClick={moveToSegmentation}>
 	        	Continue to segmentation

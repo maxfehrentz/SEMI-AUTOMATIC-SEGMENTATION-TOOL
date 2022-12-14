@@ -1,4 +1,5 @@
 import { React, useEffect, useRef, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import './SharedStyles.css';
 import './SegmentationScreen.css';
 import axios from 'axios';
@@ -9,6 +10,10 @@ import Slider from '@mui/material/Slider';
 
 
 export default function SegmentationScreen() {
+
+    // retrieving the state held throughout the navigation, will eventually be passed back to the bounding box screen
+    const location = useLocation();
+    const state = location.state;
 
     // this accesses the parameteres that were passed while navigating from the previous screen
     const params = useParams();
@@ -45,7 +50,13 @@ export default function SegmentationScreen() {
    const [opacity, setOpacity] = useState(75);
 
    // state to track the text on the button to proceeds between segments
-   const [proceedButtonText, setProceedButtonText] = useState("Next segment");
+   const [lastSegment, setLastSegment] = useState(false);
+   const initialProceedButtonText = "Next segment";
+   const finalProceedButtonText = "Finish segmentations";
+   const [proceedButtonText, setProceedButtonText] = useState(initialProceedButtonText);
+
+   // navigation
+   const navigate = useNavigate();
 
    // offsets in x and y direction to center the image in the window
    const centerShiftX = useRef(null);
@@ -74,6 +85,15 @@ export default function SegmentationScreen() {
 
     }, []);
 
+    useEffect(() => {
+        if (lastSegment) {
+            setProceedButtonText(finalProceedButtonText);
+        }
+        else {
+            setProceedButtonText(initialProceedButtonText);
+        }
+    }, [lastSegment]);
+
 
     const doubleScreenDensitiy = canvas => {
         // For supporting computers with higher screen densities, we double the screen density
@@ -94,7 +114,7 @@ export default function SegmentationScreen() {
         to display another text, because by pressing "next" he will finish the segmentation for this image
         */
         if (currentIndex === ids.length - 1) {
-            setProceedButtonText("Finish segmentations")
+            setLastSegment(true);
         }
 
         /*
@@ -102,7 +122,7 @@ export default function SegmentationScreen() {
         when all segments are done, the currentIndex will be equal to the length of the ids array and it is done
         */
         if (currentIndex === ids.length) {
-            // TODO: navigate to another screen! because the user is done with all segments
+            // TODO: throw error, should never happen because we navigate before
             return
         }
 
@@ -394,7 +414,17 @@ export default function SegmentationScreen() {
         axios.post(
             `http://localhost:8000/reset/`        
         ).then(() => {
-            setCurrentIndex(prevIndex => {return prevIndex + 1})
+            if(lastSegment) {
+                // TODO: reset everything else that might have to be reseted
+                /* 
+                if the button was pressed when dealing with the last segment, we route back to proceed
+                with the next image
+                */
+                navigate("/bounding", { state: state });
+            }
+            else {
+                setCurrentIndex(prevIndex => {return prevIndex + 1});
+            }
         })
     }
 
