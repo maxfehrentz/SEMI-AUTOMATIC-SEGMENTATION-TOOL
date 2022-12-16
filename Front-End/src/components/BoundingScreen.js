@@ -57,7 +57,7 @@ export default function BoundingScreen() {
     const isDrawing = useRef(false);
 
     // tracking whether or not the user is moving a box and which one; null represents that no movement atm
-    const indexOfMovingBox = useRef(null);
+    const [indexOfMovingBox, setIndexOfMovingBox] = useState(null);
 
     // tracking which box is being rescaled and where
     const [indexOfScalingBox, setIndexOfScalingBox] = useState(null);
@@ -171,13 +171,24 @@ export default function BoundingScreen() {
         const ctx = ctxRef2.current;
         ctx.strokeStyle = "red";
 
+        var index = 0;
         for (const boundingBox of boundingBoxes) {
             const {x, y, width, height, id} = boundingBox;
+            // highlight box if being hovered over, scaled, or moved
+            if(id === highlightedId || index === indexOfScalingBox || index === indexOfMovingBox) {
+                ctx.fillStyle = "rgba( 255, 0, 0, 0.3 )";
+            }
+            else {
+                ctx.fillStyle = "transparent";
+            }
             ctx.strokeRect(x, y, width, height);
+            ctx.fillRect(x, y, width, height);
+            index += 1;
         }
-    }, [boundingBoxes])
+    }, [boundingBoxes, highlightedId, indexOfScalingBox, indexOfMovingBox])
 
 
+    // TODO: this should probably be part of the previous bounding box hook
     useEffect(() => {
         clearCanvas2();
 
@@ -371,10 +382,10 @@ export default function BoundingScreen() {
             stopDrawingBox();
             isDrawing.current = false;
         }
-        else if (indexOfMovingBox.current !== null) {
+        else if (indexOfMovingBox !== null) {
             // this process was started by chosing "Move" in the right click custom context menu
             // the left click now stops the movement
-            indexOfMovingBox.current = null;
+            setIndexOfMovingBox(null);
         }
         else if (indexOfScalingBox !== null) {
             // if the user already chose a corner before, this second click finishes the process
@@ -461,17 +472,17 @@ export default function BoundingScreen() {
         availableId.current++;
     })
 
-    // either we are drawing a box (clicked before), checking if a box is hovered over, or move a box
+    // either we are drawing a box (clicked before), checking if a box is hovered over, move a box, or scale
     const onMouseMove = (({nativeEvent}) => {
 
         const {x, y} = nativeEvent;
         const translatedY = translateY(y);
 
         // moving a box
-        if(indexOfMovingBox.current !== null) {
+        if(indexOfMovingBox !== null) {
             setBoundingBoxes(prevBoxes => {
-                const movingBox = prevBoxes[indexOfMovingBox.current]
-                prevBoxes[indexOfMovingBox.current] = {
+                const movingBox = prevBoxes[indexOfMovingBox]
+                prevBoxes[indexOfMovingBox] = {
                     x: x - (movingBox.width / 2), 
                     y: translatedY - (movingBox.height / 2), 
                     width: movingBox.width, 
@@ -481,6 +492,7 @@ export default function BoundingScreen() {
                 return [...prevBoxes];
             })
         }
+
         // rescaling a box
         else if(indexOfScalingBox !== null) {
 
@@ -677,7 +689,7 @@ export default function BoundingScreen() {
         for (const box of boundingBoxes) {
             const {x, y, width, height, id} = box;
             if (id === highlightedId) {
-                indexOfMovingBox.current = index;
+                setIndexOfMovingBox(index);
             }
             else {
                 index++;
