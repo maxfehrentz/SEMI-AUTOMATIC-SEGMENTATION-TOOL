@@ -59,7 +59,7 @@ def compute_mask(image, clicks, prev_mask, predictor,
 
         # adapted from https://www.geeksforgeeks.org/erosion-dilation-images-using-opencv-python/
         # Creating kernel
-        kernel = np.ones((7, 7), np.uint8)
+        kernel = np.ones((3, 3), np.uint8)
   
         # Using cv2.erode() and cv2.dilate() for cleaning up noise
         eroded = cv2.erode(pred_mask, kernel) 
