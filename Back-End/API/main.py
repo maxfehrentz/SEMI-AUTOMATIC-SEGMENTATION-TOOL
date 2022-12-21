@@ -217,6 +217,8 @@ async def update_bounding_image(imageBase64: ImageBase64):
     decoded_img = Image.open(io.BytesIO(decoded_img))
     current_bounding_image = np.array(decoded_img, dtype = np.uint8)
 
+    image_height, image_width, _ = np.shape(current_bounding_image)
+
     # resetting the rois
     rois.clear()
 
@@ -230,13 +232,6 @@ async def update_bounding_image(imageBase64: ImageBase64):
     # see https://detectron2.readthedocs.io/en/latest/modules/structures.html for details
     mask_rccn_output = mask_rcnn_predictor(current_bounding_image)
 
-    # TODO: process the bounding boxes for the front-end (and later also the masks)
-    # send bounding boxes relative to the image to the front-end, DO NOT save them yet as json files yet;
-    # wait for user to correct them
-    # same goes for the segmentation masks: wait for user to correct them and only convert the final
-    # boxes + masks into COCO/Pascal Voc or whatever format and save them; still the masks need to be
-    # extracted here and saved somehow
-
     instances = mask_rccn_output["instances"]
     # the tensor is of shape (number of boxes, 4), where the 4 entries are x1, y1, x2, and y2
     # they represent the coordinates of the upper left and lower right corner
@@ -248,10 +243,38 @@ async def update_bounding_image(imageBase64: ImageBase64):
 
     # the boxes receive unique ids
     boxes_with_id = []
+    # the boxes will be widened a bit since the mask r-cnn gives very narrow bounding boxes which is
+    # not ideal for the iterative correction
+    widening_factor = 1.1
     for i in range(len(boxes_tensors)):
-        rois.update({i: ROI(bounding_box = boxes_tensors[i], suggested_mask = masks_tensors[i])})
+        x1, y1, x2, y2 = boxes_tensors.numpy()[i]
+
+        width = x2 - x1
+        height = y2 - y1
+
+        additional_width = width * (widening_factor - 1)
+        additional_height = height * (widening_factor - 1)
+
+        new_x1 = x1 - (additional_width / 2)
+        new_x2 = x2 + (additional_width / 2)
+        new_y1 = y1 - (additional_height / 2)
+        new_y2 = y2 + (additional_height / 2)
+
+        # check for each new "widened" coordinate whether it is still in the image
+        if new_x1 < 0 or new_x1 > image_width:
+            new_x1 = x1
+        if new_x2 < 0 or new_x2 > image_width:
+            new_x2 = x2
+        if new_y1 < 0 or new_y1 > image_height:
+            new_y1 = y1
+        if new_y2 < 0 or new_y2 > image_height:
+            new_y2 = y2
+
+        new_bounding_box_tensor = torch.Tensor([new_x1, new_y1, new_x2, new_y2])
+        rois.update({i: ROI(bounding_box = new_bounding_box_tensor, suggested_mask = masks_tensors[i])})
+
         # the rois dict is for the backend; however, the frontend needs just the boxes with their ids
-        boxes_with_id.append(boxes_tensors[i].tolist() + [i])
+        boxes_with_id.append(new_bounding_box_tensor.tolist() + [i])
 
     return boxes_with_id
 
