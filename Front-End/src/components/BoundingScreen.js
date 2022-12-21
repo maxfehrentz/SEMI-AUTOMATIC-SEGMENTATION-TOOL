@@ -458,6 +458,7 @@ export default function BoundingScreen() {
             // create entry in the bounding box list
             setBoundingBoxes(prevBoxes => {
                 const id = availableId.current;
+                setHighlightedId(id);
                 prevBoxes.push(
                     {
                         x: x, 
@@ -476,12 +477,12 @@ export default function BoundingScreen() {
         originBoxX.current = null;
         originBoxY.current = null;
         availableId.current++;
+        setHighlightedId(null);
     })
 
     // returning true if the user operates outside the image when rescaling/drawing/moving a box
     const leftOutOfImage = (currentX, width) => {
-        if (currentX + width - centerShiftX.current < 0) {
-            console.log("out of image on the left");
+        if (currentX + width - centerShiftX.current < 0 || currentX - centerShiftX.current < 0) {
             return true;
         }
         else {
@@ -489,8 +490,8 @@ export default function BoundingScreen() {
         }
     }
     const bottomOutOfImage = (currentY, height) => {
-        if (currentY + height - centerShiftY.current > imageHeight.current) {
-            console.log("out of image on the bottom");
+        if (currentY + height - centerShiftY.current > imageHeight.current 
+            || currentY - centerShiftY.current > imageHeight.current) {
             return true;
         }
         else {
@@ -498,8 +499,8 @@ export default function BoundingScreen() {
         }
     }
     const rightOutOfImage = (currentX, width) => {
-        if (currentX + width - centerShiftX.current > imageWidth.current) {
-            console.log("out of image on the right");
+        if (currentX + width - centerShiftX.current > imageWidth.current
+            || currentX - centerShiftX.current > imageWidth.current) {
             return true;
         }
         else {
@@ -507,13 +508,31 @@ export default function BoundingScreen() {
         }
     }
     const topOutOfImage = (currentY, height) => {
-        if (currentY + height - centerShiftY.current < 0) {
-            console.log("out of image on the top");
+        if (currentY + height - centerShiftY.current < 0
+            || currentY - centerShiftY.current < 0) {
             return true;
         }
         else {
             return false;
         }
+    }
+
+    // check if mouse left image while rescaling/moving/drawing
+    const adjustBoxWhenMouseLeavesImage = (x, y, width, height) => {          
+        // checking if mouse left the image somewhere and adjusting box accordingly
+        if(leftOutOfImage(x, width)) {
+            width = -x + centerShiftX.current;
+        }
+        if(bottomOutOfImage(y, height)) {
+            height = imageHeight.current - y;
+        }
+        if(topOutOfImage(y, height)) {
+            height = -y + centerShiftY.current;
+        }
+        if(rightOutOfImage(x, width)) {
+            width = imageWidth.current - x + centerShiftX.current;
+        }
+        return {x, y, width, height};
     }
 
 
@@ -525,17 +544,31 @@ export default function BoundingScreen() {
 
         // moving a box
         if(indexOfMovingBox !== null) {
-            setBoundingBoxes(prevBoxes => {
-                const movingBox = prevBoxes[indexOfMovingBox]
-                prevBoxes[indexOfMovingBox] = {
-                    x: xMouse - (movingBox.width / 2), 
-                    y: translatedY - (movingBox.height / 2), 
-                    width: movingBox.width, 
-                    height: movingBox.height,
-                    id: movingBox.id
-                };
-                return [...prevBoxes];
-            })
+
+            const movingBox = boundingBoxes[indexOfMovingBox];
+
+            const x = xMouse - (movingBox.width / 2);
+            const y = translatedY - (movingBox.height / 2);
+            const width = movingBox.width;
+            const height = movingBox.height;
+            const id = movingBox.id;
+
+            // only update the bounding box if it is fully in the image
+            if (!(leftOutOfImage(x, width) || 
+                bottomOutOfImage(y, height) || 
+                rightOutOfImage(x, width) || 
+                topOutOfImage(y, height))) {
+                setBoundingBoxes(prevBoxes => {
+                    prevBoxes[indexOfMovingBox] = {
+                        x: x, 
+                        y: y, 
+                        width: width, 
+                        height: height,
+                        id: id
+                    };
+                    return [...prevBoxes];
+                })
+            }
         }
 
         // rescaling a box
@@ -583,19 +616,7 @@ export default function BoundingScreen() {
                     console.log("the chosen corner does not exist")
                 }
 
-                // checking if mouse left the image somewhere and adjusting box accordingly
-                if(leftOutOfImage(x, width)) {
-                    width = -x + centerShiftX.current;
-                }
-                if(bottomOutOfImage(y, height)) {
-                    height = imageHeight.current - y;
-                }
-                if(topOutOfImage(y, height)) {
-                    height = -y + centerShiftY.current;
-                }
-                if(rightOutOfImage(x, width)) {
-                    width = imageWidth.current - x + centerShiftX.current;
-                }
+                var {x, y, width, height} = adjustBoxWhenMouseLeavesImage(x, y, width, height);
 
                 setBoundingBoxes(prevBoxes => {
                     prevBoxes[indexOfScalingBox] = {
@@ -654,24 +675,29 @@ export default function BoundingScreen() {
         // this is the case that the user is drawing
         else {
             setBoundingBoxes(prevBoxes => {
-            const currentBox = prevBoxes.pop();
-            const id = currentBox.id;
-            if(id !== availableId.current) {
-                throw Error(`not modifying the current box! box id is ${id} but current id is ${availableId.current}`);
-            }
-            console.log(`width: ${currentImage.naturalWidth * currentScale.current},
-            height: ${currentImage.naturalHeight * currentScale.current}`)
-            console.log(`x: ${xMouse - centerShiftX.current}, y: ${translatedY - centerShiftY.current}`)
-            prevBoxes.push( 
-                {
-                    x: originBoxX.current, 
-                    y: originBoxY.current, 
-                    width: xMouse - originBoxX.current, 
-                    height: translatedY - originBoxY.current,
-                    id: id
+                const currentBox = prevBoxes.pop();
+                const id = currentBox.id;
+                if(id !== availableId.current) {
+                    throw Error(`not modifying the current box! box id is ${id} but current id is ${availableId.current}`);
                 }
-            );
-            return [...prevBoxes];
+
+                var x = originBoxX.current;
+                var y = originBoxY.current;
+                var width = xMouse - originBoxX.current;
+                var height = translatedY - originBoxY.current;
+
+                var {x, y, width, height} = adjustBoxWhenMouseLeavesImage(x, y, width, height);
+
+                prevBoxes.push( 
+                    {
+                        x: x, 
+                        y: y, 
+                        width: width, 
+                        height: height,
+                        id: id
+                    }
+                );
+                return [...prevBoxes];
             })
         }
     })
@@ -840,8 +866,6 @@ export default function BoundingScreen() {
                     <canvas className="canvas2"
                         onClick={onLeftClick}
                         onMouseMove={onMouseMove}
-                        // TODO: figure this behavior out, there is a bug
-                        onMouseLeave={stopDrawingBox}
                         ref={canvasRef2}
                     />
             </div>
