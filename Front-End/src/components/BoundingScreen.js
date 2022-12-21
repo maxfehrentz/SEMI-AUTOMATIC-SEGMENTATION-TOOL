@@ -40,6 +40,8 @@ export default function BoundingScreen() {
     // track the current image, by which factor it was scaled, and the brightness
     const [currentImage, setCurrentImage] = useState(null);
     const currentScale = useRef(null);
+    const imageHeight = useRef(null);
+    const imageWidth = useRef(null);
     // 100% is the standard inherent image brightness
     const [brightness, setBrightness] = useState(100); 
  
@@ -154,6 +156,10 @@ export default function BoundingScreen() {
     
             imgHeight = imgHeight*scale;
             imgWidth = imgWidth*scale;
+
+            // storing those values, needed when drawing
+            imageHeight.current = imgHeight;
+            imageWidth.current = imgWidth;
                        
             // need to divide by two in the end because the whole canvas was scaled by 2
             centerShiftX.current = ((canvas.width / 2) - imgWidth) / 2;
@@ -472,18 +478,57 @@ export default function BoundingScreen() {
         availableId.current++;
     })
 
+    // returning true if the user operates outside the image when rescaling/drawing/moving a box
+    const leftOutOfImage = (currentX, width) => {
+        if (currentX + width - centerShiftX.current < 0) {
+            console.log("out of image on the left");
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+    const bottomOutOfImage = (currentY, height) => {
+        if (currentY + height - centerShiftY.current > imageHeight.current) {
+            console.log("out of image on the bottom");
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+    const rightOutOfImage = (currentX, width) => {
+        if (currentX + width - centerShiftX.current > imageWidth.current) {
+            console.log("out of image on the right");
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+    const topOutOfImage = (currentY, height) => {
+        if (currentY + height - centerShiftY.current < 0) {
+            console.log("out of image on the top");
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+
     // either we are drawing a box (clicked before), checking if a box is hovered over, move a box, or scale
     const onMouseMove = (({nativeEvent}) => {
 
-        const {x, y} = nativeEvent;
-        const translatedY = translateY(y);
+        const {x: xMouse, y: yMouse} = nativeEvent;
+        const translatedY = translateY(yMouse);
 
         // moving a box
         if(indexOfMovingBox !== null) {
             setBoundingBoxes(prevBoxes => {
                 const movingBox = prevBoxes[indexOfMovingBox]
                 prevBoxes[indexOfMovingBox] = {
-                    x: x - (movingBox.width / 2), 
+                    x: xMouse - (movingBox.width / 2), 
                     y: translatedY - (movingBox.height / 2), 
                     width: movingBox.width, 
                     height: movingBox.height,
@@ -500,61 +545,68 @@ export default function BoundingScreen() {
             if(cornerOfScalingBox.current !== null) {
                 const boxId = boundingBoxes[indexOfScalingBox].id;
 
+                var x = 0;
+                var y = 0;
+                var width = 0;
+                var height = 0;
+                const id = boxId;
+
                 if (cornerOfScalingBox.current === "topLeft") {
                     // "anchor" during the scaling is bottom right
-                    setBoundingBoxes(prevBoxes => {
-                        prevBoxes[indexOfScalingBox] = {
-                            x: bottomRight.current.x, 
-                            y: bottomRight.current.y, 
-                            width: x - bottomRight.current.x, 
-                            height: translatedY - bottomRight.current.y,
-                            id: boxId
-                        }
-                        return [...prevBoxes];
-                    })
+                    x = bottomRight.current.x;
+                    y = bottomRight.current.y;
+                    width = xMouse - bottomRight.current.x;
+                    height = translatedY - bottomRight.current.y;
                 }
                 else if (cornerOfScalingBox.current === "topRight") {
                     // "anchor" during the scaling is bottom left
-                    setBoundingBoxes(prevBoxes => {
-                        prevBoxes[indexOfScalingBox] = {
-                            x: bottomLeft.current.x, 
-                            y: bottomLeft.current.y, 
-                            width: x - bottomLeft.current.x, 
-                            height: translatedY - bottomLeft.current.y,
-                            id: boxId
-                        }
-                        return [...prevBoxes];
-                    })
+                    x = bottomLeft.current.x;
+                    y = bottomLeft.current.y;
+                    width = xMouse - bottomLeft.current.x;
+                    height = translatedY - bottomLeft.current.y;
                 }
                 else if (cornerOfScalingBox.current === "bottomLeft") {
                     // "anchor" during the scaling is top right
-                    setBoundingBoxes(prevBoxes => {
-                        prevBoxes[indexOfScalingBox] = {
-                            x: topRight.current.x, 
-                            y: topRight.current.y, 
-                            width: x - topRight.current.x, 
-                            height: translatedY - topRight.current.y,
-                            id: boxId
-                        }
-                        return [...prevBoxes];
-                    })
+                    x = topRight.current.x;
+                    y = topRight.current.y;
+                    width = xMouse - topRight.current.x;
+                    height = translatedY - topRight.current.y;
                 }
                 else if (cornerOfScalingBox.current === "bottomRight") {
                     // "anchor" during the scaling is top left
-                    setBoundingBoxes(prevBoxes => {
-                        prevBoxes[indexOfScalingBox] = {
-                            x: topLeft.current.x, 
-                            y: topLeft.current.y, 
-                            width: x - topLeft.current.x, 
-                            height: translatedY - topLeft.current.y,
-                            id: boxId
-                        }
-                        return [...prevBoxes];
-                    })
+                    x = topLeft.current.x;
+                    y = topLeft.current.y;
+                    width = xMouse - topLeft.current.x; 
+                    height = translatedY - topLeft.current.y;
                 }
                 else {
                     console.log("the chosen corner does not exist")
                 }
+
+                // checking if mouse left the image somewhere and adjusting box accordingly
+                if(leftOutOfImage(x, width)) {
+                    width = -x + centerShiftX.current;
+                }
+                if(bottomOutOfImage(y, height)) {
+                    height = imageHeight.current - y;
+                }
+                if(topOutOfImage(y, height)) {
+                    height = -y + centerShiftY.current;
+                }
+                if(rightOutOfImage(x, width)) {
+                    width = imageWidth.current - x + centerShiftX.current;
+                }
+
+                setBoundingBoxes(prevBoxes => {
+                    prevBoxes[indexOfScalingBox] = {
+                        x: x, 
+                        y: y, 
+                        width: width,
+                        height: height,
+                        id: boxId
+                    }
+                    return [...prevBoxes];
+                })
             }
 
         }
@@ -585,8 +637,8 @@ export default function BoundingScreen() {
                     maxBoxY = boundingBox.y + boundingBox.height;
                 }
                     
-                if (x > minBoxX 
-                    && x < maxBoxX
+                if (xMouse > minBoxX 
+                    && xMouse < maxBoxX
                     && translatedY > minBoxY
                     && translatedY < maxBoxY) {
                     // saving the id so in case the user places a right click, I know which box he wants
@@ -607,11 +659,14 @@ export default function BoundingScreen() {
             if(id !== availableId.current) {
                 throw Error(`not modifying the current box! box id is ${id} but current id is ${availableId.current}`);
             }
+            console.log(`width: ${currentImage.naturalWidth * currentScale.current},
+            height: ${currentImage.naturalHeight * currentScale.current}`)
+            console.log(`x: ${xMouse - centerShiftX.current}, y: ${translatedY - centerShiftY.current}`)
             prevBoxes.push( 
                 {
                     x: originBoxX.current, 
                     y: originBoxY.current, 
-                    width: x - originBoxX.current, 
+                    width: xMouse - originBoxX.current, 
                     height: translatedY - originBoxY.current,
                     id: id
                 }
