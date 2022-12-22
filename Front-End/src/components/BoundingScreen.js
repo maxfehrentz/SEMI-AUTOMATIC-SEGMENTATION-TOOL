@@ -448,8 +448,16 @@ export default function BoundingScreen() {
                 bottomRight.current = null;
             }
         }
-        // only allow drawing if there is an image set
+        // only allow drawing if there is an image set and the click is within that image
         else if (currentImage) {
+
+            // check if click is outside of the image
+            if(x - centerShiftX.current < 0 || x - centerShiftX.current > imageWidth.current ||
+                translatedY - centerShiftY.current < 0 || translatedY - centerShiftY.current > imageHeight.current) {
+                // in that case, the click is outside of the image and nothing happens
+                return;
+            }
+
             isDrawing.current = true;
 
             originBoxX.current = x;
