@@ -105,7 +105,7 @@ export default function BoundingScreen() {
         if(fileIndex.current > 0) {
             // if we reached the length of the array, all files are handled and we are done here
             if(fileIndex.current === fileHandles.current.length) {
-                // TODO: navigate to another screen where user is asked in which format to save stuff
+                navigate("/annotationChoice");
             }
             else {
                 // loading the next image

@@ -1,0 +1,12 @@
+.center{
+    text-align: center;
+}
+
+.button_choice{
+    position: relative;
+    box-sizing: border-box;
+    width: 75%;
+    height: 20%;
+    font-size: '1rem';
+    z-index: 1;
+}
