@@ -30,6 +30,7 @@ from custom_inference import compute_mask
 sys.path.append(os.path.relpath("../FocalClick/isegm/inference/predictors"))
 from focalclick import FocalPredictor
 
+from pngs_to_coco import *
 
 app = FastAPI()
 
@@ -51,6 +52,7 @@ app.add_middleware(
 # details on data models in FastAPI can be found here: https://fastapi.tiangolo.com/tutorial/body/
 class ImageBase64(BaseModel):
     content: bytes
+    name: str
 
 
 # making an enum instead of using bool because later we might have automatically generated clicks
@@ -86,10 +88,17 @@ class ROI():
         self.bounding_box = bounding_box
         self.suggested_mask = suggested_mask
 
+# as np array 
+global current_bounding_image
+global current_filename
+global filenames
+current_bounding_image = None
+current_filename = ""
+filenames = []
+
 # as np array
 global current_segmentation_image
-# TODO: why is this a string and not an empty np.array?
-current_segmentation_image = ""
+current_segmentation_image = None
 
 # as pytorch tensors
 global mask
@@ -211,6 +220,11 @@ def update_segment(image, initial_mask = None):
 # TODO: find more suitable name than "bounding image"
 async def update_bounding_image(imageBase64: ImageBase64):
     global current_bounding_image
+    global current_filename
+    global filenames
+
+    current_filename = imageBase64.name
+    filenames.append(current_filename)
 
     # adapted from https://stackoverflow.com/questions/57318892/convert-base64-encoded-image-to-a-numpy-array
     decoded_img = base64.b64decode(imageBase64.content)
@@ -344,6 +358,40 @@ async def reset():
 
     return
 
+
+# way for the frontend to communicate that a mask is finished
+# TODO: some urls are with -, others use Camel case; figure out what's the right convention
+@app.post("/mask-finished/{id}")
+async def mask_finished(id):
+
+    # take the mask as it was currently saved and augment it so it is in the right place relative to the full image
+    augmented_mask = np.zeros(shape = np.shape(current_bounding_image)[:-1])
+    bounding_box = rois.get(int(id)).bounding_box
+    x1 = int(bounding_box[0])
+    y1 = int(bounding_box[1])
+    x2 = int(bounding_box[2])
+    y2 = int(bounding_box[3])
+    zero_mask = augmented_mask
+    augmented_mask[y1:y2, x1:x2] = mask
+
+    # create image
+    mask_image = cv2.merge((zero_mask, zero_mask, augmented_mask * 255))
+
+    # save
+    split_filename = current_filename.split(".")
+    filename_without_extension = split_filename[0]
+
+    path_dir = os.path.join(mask_folder, filename_without_extension)
+    # in case this is the first segment, the folder for this image does not exist yet
+    if not os.path.isdir(path_dir):
+        os.mkdir(path_dir)
+    path = os.path.join(mask_folder, filename_without_extension + "/" + id + ".png")
+    success = cv2.imwrite(path, mask_image)
+    if not success:
+        raise Exception("Writing the image failed!")
+        
+
+
 @app.get("/rollBackClick/")
 async def roll_back_click():
     global mask
@@ -476,7 +524,7 @@ async def get_segment_with(id: int):
     else:
         # cropping the mask as well to the releveant area
         mask = mask[y_origin:y_limit, x_origin:x_limit]
-        # .long() is necessary to convert the mask to whole numbers, because
+        # .long() is necessary to convert the mask to numbers, because
         # the mask r-cnn returns a boolean tensor
         update_segment(image_segment, mask.long())
     
@@ -493,6 +541,24 @@ async def get_segment_with(id: int):
     return [encoded_segment, encoded_mask]
 
     
+@app.get("/coco-annotations/")
+async def get_coco_annotations():
+    # note that this saves a json file in this working directory; the same content will be passed to the frontend
+    # in order to be saved to a user defined location; for privacy reasons, the full path the
+    # user chose in the frontend is not fully revealed to the browser and therefore the backend
+    # does not know where the user wants to save the file
+    output_path = "./annotations.json"
+    masks_path = "./masks"
+
+    create_COCO(output_path, filenames, masks_path)
+
+    with open(output_path, "rb") as json_file:
+        coco_as_string = json_file.read()
+
+    # TODO: delete all the pngs in the masks folder as a cleanup; also reset the filenames
+
+    return coco_as_string
+
 
     
 

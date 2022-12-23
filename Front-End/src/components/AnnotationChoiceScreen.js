@@ -1,9 +1,9 @@
 import './AnnotationChoiceScreen.css';
+import axios from 'axios';
 
 export default function AnnotationChoiceScreen() {
 
     const clickedCOCO = async () => {
-        console.log("COCO was chosen");
 
         // for more information see https://developer.mozilla.org/en-US/docs/Web/API/Window/showSaveFilePicker
         // note: as of December 2022, this is only supported by chromium based web browsers!
@@ -17,25 +17,38 @@ export default function AnnotationChoiceScreen() {
             }],
           });
 
-        // TODO: send relevant infos to backend and let it deal with conversion etc
+        /* send relevant infos to backend; will be GET request because writeback
+        of the json content has to happen here since the full path of the chosen location is not revealed in
+        the browser, only the handle and the handle cannot be passed to the backend */ 
+        axios.get(
+            `http://localhost:8000/coco-annotations`       
+        ).then(async response => {
+
+            const descriptor = {
+                writable: true,
+                mode: "readwrite"
+            }
+            const permissionState = await handle.requestPermission(descriptor)
+            // TODO: check the permissionState
+            console.log(`permission state: ${permissionState}`);
+
+            const writeableStream = await handle.createWritable();
+            await writeableStream.write(response.data);
+            await writeableStream.close();
+        });
     }
 
-    const clickedPascal = () => {
-        console.log("Pascal was chosen");
-        // TODO: let user choose a folder where to save the annotations
-    }
+
+    // TODO: navigate back when everything is saved and don't forget to reset all the file handles that might be saved in location!
 
     return (
         <div className="center">
             <header>
                 <h1>Annotation formats</h1>
             </header>
-            <p>Choose from <em>COCO</em> and <em>PascalVOC</em> to export your annotations!</p>
+            <p>Choose from <em>COCO</em> and more to come to export your annotations!</p>
             <button className="button_choice" onClick={clickedCOCO}>
                 COCO
-            </button>
-            <button className="button_choice" onClick={clickedPascal}>
-                PascalVOC
             </button>
         </div>
     )

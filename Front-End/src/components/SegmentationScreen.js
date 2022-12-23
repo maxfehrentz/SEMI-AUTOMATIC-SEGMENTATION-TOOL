@@ -126,11 +126,6 @@ export default function SegmentationScreen() {
             return
         }
 
-        /*
-        TODO: whenever the currentIndex changes
-        (except for the initialization), we also want to notify the backend in a separate request
-        that we are done and the generated mask can be saved as final!
-        */
         const id = ids[currentIndex];
 
         axios.get(
@@ -409,25 +404,25 @@ export default function SegmentationScreen() {
 
 
     const nextSegment = () => {
-        // tell the backend to reset clicks and mask
-        // TODO: clear that up, what is exactly being reset
-        axios.post(
-            `http://localhost:8000/reset/`        
-        ).then(() => {
-            if(lastSegment) {
-                // TODO: reset everything else that might have to be reseted
-                /* 
-                if the button was pressed when dealing with the last segment, we route back to proceed
-                with the next image
-                */
-                navigate("/bounding", { state: state });
-            }
-            else {
-                setCurrentIndex(prevIndex => {return prevIndex + 1});
-            }
+        // TODO: do proper error handling
+        axios.post(`http://localhost:8000/mask-finished/${ids[currentIndex]}`).then(_ => {
+            // tell the backend to reset clicks and mask
+            // TODO: clear that up, what is exactly being reset
+            axios.post(
+                `http://localhost:8000/reset/`        
+            ).then(() => {
+                if(lastSegment) {
+                    // TODO: reset everything else that might have to be reseted
+                    navigate("/bounding", { state: state });
+                }
+                else {
+                    setCurrentIndex(prevIndex => {return prevIndex + 1});
+                }
+            })
         })
     }
 
+    
     const brightnessChanged = (_, newValue) => {
         setBrightness(newValue);
     }
@@ -451,8 +446,8 @@ export default function SegmentationScreen() {
                 <Slider
                     onChangeCommitted={opacityChanged}
                     orientation="horizontal"
-                    defaultValue={75}
-                    min={50}
+                    defaultValue={50}
+                    min={0}
                     max={100}
                     aria-label="opacity"
                     valueLabelDisplay="off"

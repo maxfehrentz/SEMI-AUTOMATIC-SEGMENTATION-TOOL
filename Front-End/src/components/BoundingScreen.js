@@ -290,6 +290,7 @@ export default function BoundingScreen() {
     const loadImage = async (handle) => {
 
         const file = await handle.getFile();
+        const nameOfFile = handle.name;
 
         const image = new Image();
 
@@ -304,7 +305,7 @@ export default function BoundingScreen() {
             image.src = reader.result;
             /* reader.result contains the image in Base64 format; removing some additional info and wrapping it in 
             JSON to send it to the backend */
-            const imageJson = {content: reader.result.split(',')[1]};
+            const imageJson = {content: reader.result.split(',')[1], name: nameOfFile};
 
             setLoading(true);
 
