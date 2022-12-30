@@ -29,6 +29,10 @@ export default function BoundingScreen() {
     // state that indicates whether the user has to wait for a response from the backend
     const [loading, setLoading] = useState(false);
 
+    // states that control the buttons
+    const [loadImagesDisabled, setLoadImagesDisabled] = useState(false);
+    const [moveToSegDisabled, setMoveToSegDisabled] = useState(true);
+
     // refs to track the files and current index that the user wants to work on
     const fileHandles = useRef([]);
     const fileIndex = useRef(0);
@@ -341,6 +345,8 @@ export default function BoundingScreen() {
 
                         // loading can stop
                         setLoading(false);
+                        // user could also move right to segmentation
+                        setMoveToSegDisabled(false);
 
                         return [...newBoxes];
                     })
@@ -358,6 +364,9 @@ export default function BoundingScreen() {
 
         // TODO: make sure to accept only .jpeg, .png, .jpg
         fileHandles.current = await window.showOpenFilePicker({multiple: true});
+
+        // disable the button to load more images
+        setLoadImagesDisabled(true);
 
         // take the first handle
         fileIndex.current = 0;
@@ -878,10 +887,10 @@ export default function BoundingScreen() {
                         ref={canvasRef2}
                     />
             </div>
-            <button className="button_bounding" onClick={loadFiles}>
+            <button className="button_bounding" onClick={loadFiles} disabled={loadImagesDisabled}>
 	        	Load image(s)
 	        </button>
-            <button className="button_bounding" onClick={moveToSegmentation}>
+            <button className="button_bounding" onClick={moveToSegmentation} disabled={moveToSegDisabled}>
 	        	Continue to segmentation
 	        </button>
         </div>
