@@ -49,7 +49,7 @@ def create_category_annotation(category_dict):
 
     for key, value in category_dict.items():
         category = {
-            "supercategory": key,
+            "supercategory": "",
             "id": value,
             "name": key
         }

@@ -6,12 +6,13 @@ from create_annotations import *
 
 # Label ids of the dataset
 category_ids = {
-    # note that 0 usually stands for outlier; however
-    "grape": 0
+    # note that 1 usually stands for something else; unfortunately there is no category for grapes yet
+    # 1 is chosen because CVAT exports unknown categories as 1 and WGISD is annotated in the same way
+    "grape bunch": 1
 }
 
 # Define the ids that are a multipolygon; grapes can be in some instances
-multipolygon_ids = [0]
+multipolygon_ids = [1]
 
 
 # output_path is the location where the .json file with the COCO annotations will be saved 
@@ -70,7 +71,7 @@ def images_annotations_info(masks_path, filenames):
                 images.append(image)
                 write_image_infos = False
 
-            category_id = category_ids["grape"]
+            category_id = category_ids["grape bunch"]
 
             # "annotations" info
             polygons, segmentations = create_sub_mask_annotation(np.array(mask_image_open))
