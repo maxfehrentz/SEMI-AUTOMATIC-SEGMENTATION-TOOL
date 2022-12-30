@@ -1,7 +1,19 @@
 import './AnnotationChoiceScreen.css';
+import './SharedStyles.css';
 import axios from 'axios';
+import { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+
 
 export default function AnnotationChoiceScreen() {
+
+    // state to control loading annimations
+    const [loading, setLoading] = useState(false);
+
+    // navigation
+    const navigate = useNavigate();
+    // this variable contains a state that is persisted over screen navigations
+    const location = useLocation();
 
     const clickedCOCO = async () => {
 
@@ -20,6 +32,7 @@ export default function AnnotationChoiceScreen() {
         /* send relevant infos to backend; will be GET request because writeback
         of the json content has to happen here since the full path of the chosen location is not revealed in
         the browser, only the handle and the handle cannot be passed to the backend */ 
+        setLoading(true);
         axios.get(
             `http://localhost:8000/coco-annotations`       
         ).then(async response => {
@@ -35,6 +48,16 @@ export default function AnnotationChoiceScreen() {
             const writeableStream = await handle.createWritable();
             await writeableStream.write(response.data);
             await writeableStream.close();
+            setLoading(false);
+            
+            /* 
+            clean up all states/locations etc in the navigation and also let backend know to clean up,
+            then navigate back to the start
+            */
+            location.state = null;
+            axios.post("http://localhost:8000/annotation-process-finished").then( _ => {
+                navigate("/");
+            });
         });
     }
 
@@ -43,6 +66,17 @@ export default function AnnotationChoiceScreen() {
 
     return (
         <div className="center">
+            {/* taken from https://stackabuse.com/how-to-create-a-loading-animation-in-react-from-scratch/ */}
+            {loading &&
+            <div className="loader-container">
+                <div className="spinner"></div>
+                <h1>
+                    The .json file with COCO-formated annotations is being created.
+                    <br/>
+                    Another window will open where the contents of that file are visualized.
+                </h1>
+            </div>   
+            } 
             <header>
                 <h1>Annotation formats</h1>
             </header>

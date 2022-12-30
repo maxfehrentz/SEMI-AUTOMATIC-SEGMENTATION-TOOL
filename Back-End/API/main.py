@@ -138,6 +138,7 @@ if not os.path.isdir(image_folder):
     os.makedirs(image_folder)
 
 clicks = []
+
 device = torch.device('cpu')
 
 # TODO: include instruction in the Readme where to find and download the model
@@ -352,9 +353,9 @@ async def add_click(click: Click):
 # TODO: reset needs to become specific for segmentation; might have to implement a reset for
 # the bounding as well
 
-# leaves the image but resets the clicks and the mask
-@app.post("/reset/")
-async def reset():
+# leaves the image part that is being segmented but resets the clicks and the mask
+@app.post("/reset-segmentation/")
+async def reset_segmentation():
     global mask
     global prev_mask
 
@@ -583,11 +584,37 @@ async def get_coco_annotations():
     return coco_as_string
 
 
-# some cleanup when the app is terminated
+# some cleanup when the app is completely terminated
 @app.on_event("shutdown")
-def cleanup():
+def delete_tmp():
     if os.path.isdir(tmp_folder):
         shutil.rmtree(tmp_folder)
+    return
 
+# doing a full reset of everything that carries state when a annotation process finishes
+# an annotation process here starts with picking the images to be annotated and ends with saving the annotations
+@app.post("/annotation-process-finished")
+async def full_reset():
+    # TODO: figure out if those globals are necessary or if defining that in the very start is enough
+    global current_bounding_image
+    global current_filename
+    global filenames
+    current_bounding_image = None
+    current_filename = ""
+    filenames.clear()
+    
+    global current_segmentation_image
+    current_segmentation_image = None
+    
+    global mask
+    mask = None
+    global prev_mask
+    prev_mask = None
+    
+    global rois
+    rois.clear()
+    
+    clicks.clear()
 
+    return
 

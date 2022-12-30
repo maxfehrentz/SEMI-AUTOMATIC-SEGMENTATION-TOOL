@@ -321,7 +321,7 @@ export default function SegmentationScreen() {
         // first, notify the backend to reset the mask
         // TODO: think about those resets again
         axios.post(
-            `http://localhost:8000/reset/`        
+            `http://localhost:8000/reset-segmentation/`        
         ).then(() => {
             setPoints(prevPoints => {
                 return [];
@@ -409,7 +409,7 @@ export default function SegmentationScreen() {
             // tell the backend to reset clicks and mask
             // TODO: clear that up, what is exactly being reset
             axios.post(
-                `http://localhost:8000/reset/`        
+                `http://localhost:8000/reset-segmentation/`        
             ).then(() => {
                 if(lastSegment) {
                     // TODO: reset everything else that might have to be reseted
@@ -422,15 +422,17 @@ export default function SegmentationScreen() {
         })
     }
 
-    
+
     const brightnessChanged = (_, newValue) => {
         setBrightness(newValue);
     }
+
 
     const opacityChanged = (_, newValue) => {
         setOpacity(newValue);
     }
 
+    
 	return (
         <div className="fullScreen">
             <div className = "sliderContainer">
