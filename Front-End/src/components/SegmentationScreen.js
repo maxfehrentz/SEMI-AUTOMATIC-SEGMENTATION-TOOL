@@ -34,6 +34,9 @@ export default function SegmentationScreen() {
 
     // state to enable/disable the rollback button; we only allow to rollback one step
     const [rollbackDisabled, setRollbackDisabled] = useState(true);
+
+    // state to show loading animation 
+    const [loading, setLoading] = useState(false);
     
     // state to track the list of points
     const [points, setPoints] = useState([]);
@@ -248,6 +251,9 @@ export default function SegmentationScreen() {
 
 
     const addPoint = ({nativeEvent}, typeOfClick) => {
+        // show loading animation
+        setLoading(true);
+
         // extracting X and Y of the point
         const { x, y } = nativeEvent;
 
@@ -291,6 +297,8 @@ export default function SegmentationScreen() {
                         const currentMask = new Image();
                         currentMask.onload = function() {
                             setCurrentMask(currentMask);
+                            // can stop loading, new mask will be displayed
+                            setLoading(false);
                             if (rollbackDisabled) {
                                 setRollbackDisabled(false);
                             }
@@ -432,9 +440,15 @@ export default function SegmentationScreen() {
         setOpacity(newValue);
     }
 
-    
+
 	return (
         <div className="fullScreen">
+            {/* taken from https://stackabuse.com/how-to-create-a-loading-animation-in-react-from-scratch/ */}
+            {loading &&
+            <div className="loader-container">
+                <div className="spinner"></div>
+            </div>   
+            } 
             <div className = "sliderContainer">
                 <Slider
                     onChangeCommitted={brightnessChanged}
