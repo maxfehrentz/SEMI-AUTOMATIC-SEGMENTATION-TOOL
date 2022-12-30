@@ -23,6 +23,12 @@ import json
 import sys
 import os
 
+import shutil
+
+# used for visualization of annotations
+import fiftyone as fo
+import fiftyone.zoo as foz
+
 sys.path.append(os.path.relpath("../FocalClick/isegm/inference"))
 from utils import load_is_model
 sys.path.append(os.path.relpath("../FocalClick/custom_inference"))
@@ -109,21 +115,27 @@ prev_mask = None
 # dictionary of ROIs, key is the identifier, value is the ROI object
 rois = dict()
 
-# paths where to save the current and previous mask and the corresponding segment
-segment_folder = "./segments"
+# paths where to save the helper and output files
+# helper files
+tmp_folder = "./tmp"
+segment_folder = os.path.join(tmp_folder, "segments")
 path_to_segment = os.path.join(segment_folder, "current_segment.png")
-mask_folder = "./masks"
+mask_folder = os.path.join(tmp_folder, "masks")
+image_folder = os.path.join(tmp_folder, "images")
 path_to_current_mask = os.path.join(mask_folder, "current_mask.png")
 path_to_prev_mask = os.path.join(mask_folder, "prev_mask.png")
+
+# output files
+# basically it is also a helper file as this will also be saved in a location specified in the frontend
+output_path = os.path.join(tmp_folder, "annotations.json")
+
 # create the necessary folders
 if not os.path.isdir(segment_folder):
     os.makedirs(segment_folder)
 if not os.path.isdir(mask_folder):
     os.makedirs(mask_folder)
-
-# TODO: check if necessary
-# paths where to save the bounding boxes
-path_to_bounding_boxes = "./bounding_boxes/bounding_boxes.json"
+if not os.path.isdir(image_folder):
+    os.makedirs(image_folder)
 
 clicks = []
 device = torch.device('cpu')
@@ -231,16 +243,19 @@ async def update_bounding_image(imageBase64: ImageBase64):
     decoded_img = Image.open(io.BytesIO(decoded_img))
     current_bounding_image = np.array(decoded_img, dtype = np.uint8)
 
+    # save each image locally; the reason is that to visualize the annotations in the very end with fiftyone,
+    # it is necessary to feed the path to the original images; however, the browser may grant access to them via
+    # the frontend, but the full system path is never revealed to any browser for privacy reasons and therefore,
+    # the backend has no way of pointing to the folder with the original images that were annotated
+    path_to_image = os.path.join(image_folder, current_filename)
+    success = cv2.imwrite(path_to_image, current_bounding_image)
+    if not success:
+        raise Exception("Writing the image failed!")
+
     image_height, image_width, _ = np.shape(current_bounding_image)
 
     # resetting the rois
     rois.clear()
-
-    # TODO: implement some sort of saving mechanism once the user is done with the bounding boxes
-    # json file will be deleted as well; probably this needs to go in another place as
-    # the user hasn't even started to correct them
-    # if os.path.isfile(path_to_bounding_boxes):
-    #     os.remove(path_to_bounding_boxes)
 
     # run the mask-rcnn; the output is in a detectron2 specific format
     # see https://detectron2.readthedocs.io/en/latest/modules/structures.html for details
@@ -309,7 +324,7 @@ def save_current_and_prev_mask():
     # save the mask image
     success = cv2.imwrite(path_to_current_mask, mask_image)
     if not success:
-        raise Exception("Writing the image failed!")
+        raise Exception("Writing the mask failed!")
 
     return
 
@@ -543,24 +558,36 @@ async def get_segment_with(id: int):
     
 @app.get("/coco-annotations/")
 async def get_coco_annotations():
-    # note that this saves a json file in this working directory; the same content will be passed to the frontend
+    # note that this saves a json file to the output_path; the same content will be passed to the frontend
     # in order to be saved to a user defined location; for privacy reasons, the full path the
     # user chose in the frontend is not fully revealed to the browser and therefore the backend
-    # does not know where the user wants to save the file
-    output_path = "./annotations.json"
-    masks_path = "./masks"
-
-    create_COCO(output_path, filenames, masks_path)
+    # does not know where the user wants to save the file. It is saved for visualization in fiftyone,
+    # but it has to be passed back to the frontend for saving in the desired location
+    create_COCO_annotations(output_path, filenames, mask_folder)
 
     with open(output_path, "rb") as json_file:
         coco_as_string = json_file.read()
 
-    # TODO: delete all the pngs in the masks folder as a cleanup; also reset the filenames
+    # Load COCO-formated json file
+    # TODO: the classes need to be generalized
+    coco_dataset = fo.Dataset.from_dir(
+        dataset_type=fo.types.COCODetectionDataset,
+        data_path=image_folder,
+        labels_path=output_path,
+        include_id=True
+    )
+    # starting a fiftyone session in a separate window to inspect the annotations
+    session = fo.launch_app(coco_dataset)
 
+    # return the coco annotations as a string to the frontend to be saved in a user defined location
     return coco_as_string
 
 
-    
+# some cleanup when the app is terminated
+@app.on_event("shutdown")
+def cleanup():
+    if os.path.isdir(tmp_folder):
+        shutil.rmtree(tmp_folder)
 
 
 

@@ -17,7 +17,7 @@ multipolygon_ids = [0]
 # output_path is the location where the .json file with the COCO annotations will be saved 
 # the filenames correspond to the image names
 # masks_path corresponds to the folder that holds all the subfolders per image that contain the annotation pngs
-def create_COCO(output_path, filenames, masks_path):
+def create_COCO_annotations(output_path, filenames, masks_path):
     # Get the standard COCO JSON format
     coco_format = get_coco_json_format()
         

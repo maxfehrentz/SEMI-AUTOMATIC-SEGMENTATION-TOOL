@@ -8,8 +8,8 @@ env/
 current_mask.png
 prev_mask.png
 
-# exlude current segment
-current_segment.png
+# exlude all temporary files
+tmp/
 
 # node modules (can be installed based on package.json via npm install)
 node_modules/
