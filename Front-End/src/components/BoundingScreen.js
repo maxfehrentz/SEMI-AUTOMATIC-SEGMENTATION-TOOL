@@ -293,6 +293,9 @@ export default function BoundingScreen() {
 
     const loadImage = async (handle) => {
 
+        // disable the button that loads more images
+        setLoadImagesDisabled(true);
+
         const file = await handle.getFile();
         const nameOfFile = handle.name;
 
@@ -365,9 +368,6 @@ export default function BoundingScreen() {
         // TODO: make sure to accept only .jpeg, .png, .jpg
         fileHandles.current = await window.showOpenFilePicker({multiple: true});
 
-        // disable the button to load more images
-        setLoadImagesDisabled(true);
-
         // take the first handle
         fileIndex.current = 0;
         loadImage(fileHandles.current[fileIndex.current]);
@@ -393,8 +393,11 @@ export default function BoundingScreen() {
         const {x, y} = nativeEvent;
         const translatedY = translateY(y);
 
-        // TODO: make sure that user cannot draw outside of the image
         if (isDrawing.current) {
+
+            // activate button again now that drawing is finished
+            setMoveToSegDisabled(false);
+
             stopDrawingBox();
             isDrawing.current = false;
         }
@@ -413,6 +416,8 @@ export default function BoundingScreen() {
                 topRight.current = null;
                 bottomLeft.current = null;
                 bottomRight.current = null;
+                // enable button again
+                setMoveToSegDisabled(false);
                 return;
             }
 
@@ -420,6 +425,10 @@ export default function BoundingScreen() {
             // checking if the user clicked close to one of the corners
             // TODO: move tolerance to a constant file
             const tolerance = 10;
+
+            // disabling the button during rescaling; action will be reversed in case user did not target one of the corners
+            setMoveToSegDisabled(true);
+
             if(-tolerance < x - topLeft.current.x && 
                 x - topLeft.current.x < tolerance &&
                 -tolerance < translatedY - topLeft.current.y &&
@@ -456,6 +465,8 @@ export default function BoundingScreen() {
                 topRight.current = null;
                 bottomLeft.current = null;
                 bottomRight.current = null;
+
+                setMoveToSegDisabled(false);
             }
         }
         // only allow drawing if there is an image set and the click is within that image
@@ -467,6 +478,9 @@ export default function BoundingScreen() {
                 // in that case, the click is outside of the image and nothing happens
                 return;
             }
+
+            // disabling button during drawing
+            setMoveToSegDisabled(true);
 
             isDrawing.current = true;
 

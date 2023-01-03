@@ -213,7 +213,7 @@ def update_segment(image, initial_mask = None):
         os.remove(path_to_prev_mask)
 
     # saving the segment
-    cv2.imwrite(path_to_segment, current_segmentation_image)
+    cv2.imwrite(path_to_segment, cv2.cvtColor(current_segmentation_image, cv2.COLOR_RGB2BGR))
 
     # TODO: think about saving mechanisms and folders: what should be saved permanently, what
     # will be overridden during use?
@@ -249,7 +249,7 @@ async def update_bounding_image(imageBase64: ImageBase64):
     # the frontend, but the full system path is never revealed to any browser for privacy reasons and therefore,
     # the backend has no way of pointing to the folder with the original images that were annotated
     path_to_image = os.path.join(image_folder, current_filename)
-    success = cv2.imwrite(path_to_image, current_bounding_image)
+    success = cv2.imwrite(path_to_image, cv2.cvtColor(current_bounding_image, cv2.COLOR_RGB2BGR))
     if not success:
         raise Exception("Writing the image failed!")
 
@@ -323,6 +323,7 @@ def save_current_and_prev_mask():
         os.rename(path_to_current_mask, path_to_prev_mask)
 
     # save the mask image
+    # here the usual conversion for CV2 from RGB to BGR is not necessary as the mask_image is already in this format
     success = cv2.imwrite(path_to_current_mask, mask_image)
     if not success:
         raise Exception("Writing the mask failed!")

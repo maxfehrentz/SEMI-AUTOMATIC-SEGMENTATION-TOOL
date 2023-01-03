@@ -251,8 +251,6 @@ export default function SegmentationScreen() {
 
 
     const addPoint = ({nativeEvent}, typeOfClick) => {
-        // show loading animation
-        setLoading(true);
 
         // extracting X and Y of the point
         const { x, y } = nativeEvent;
@@ -288,6 +286,11 @@ export default function SegmentationScreen() {
                     y: yRelativeToScaledImage / currentScale.current, 
                     type_of_click: typeOfClick
                 };
+
+                // show loading animation
+                setLoading(true);
+
+                // communicate click to backend
                 axios.post(
                     `http://localhost:8000/clicks/`, 
                     pointJson

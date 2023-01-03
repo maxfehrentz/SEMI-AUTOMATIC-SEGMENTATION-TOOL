@@ -49,7 +49,7 @@ def compute_mask(image, clicks, prev_mask, predictor,
         _, pred_mask = cv2.threshold(pred_probs, pred_thr, 1, cv2.THRESH_BINARY)
 
         # TODO: EXPERIMENT with this number
-        if progressive_mode and len(click_list) > 8:
+        if progressive_mode and len(click_list) > 15:
             last_click = click_list[-1]
             last_x, last_y = last_click.coords[1], last_click.coords[0]
             # will compare the prediction against the previous mask
