@@ -1,6 +1,6 @@
-.fullScreen{
+.fullScreenHome{
     position: absolute;
-    /* background-color: #3d5af1; */
+    background-color: #3d5af1;
     width: 100vw;
     height: 100vh;
     box-sizing: border-box;

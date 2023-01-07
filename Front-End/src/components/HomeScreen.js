@@ -6,6 +6,8 @@ import Navbar from'./Navbar.js'
 export default function HomeScreen() {
 
 	return (
-        <Navbar />
+		<div className="fullScreenHome">
+			<Navbar />
+		</div>
 	);
 }

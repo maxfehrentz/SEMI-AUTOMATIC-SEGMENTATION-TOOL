@@ -1,0 +1,24 @@
+/* centering nav horizontally and vertically, taken from https://stackoverflow.com/questions/14123999/center-a-div-horizontally-and-vertically */
+nav {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    -webkit-transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%);
+}
+
+/* changes link color because React Link component compiles to <a> */
+a {
+    color: white;
+    font-size: x-large;
+}
+
+.navbarHeader {
+    text-align: center;
+    color: white;
+    font-size: xxx-large;
+}
+
+.links {
+    text-align: center;
+}
