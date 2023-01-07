@@ -45,11 +45,6 @@ def images_annotations_info(masks_path, filenames):
     annotations = []
     images = []
 
-    # # the segmentation masks are in separate folders corresponding to the image the masks belong to
-    # # adapted from https://stackoverflow.com/questions/800197/how-to-get-all-of-the-immediate-subdirectories-in-python
-    # image_folders_with_paths = [f.path for f in os.scandir(maskpath) if f.is_dir()]
-    # print(f"subdirs: {list_folders_with_paths}")
-
     # go through each folder; each represents one image with all the segmentation masks as pngs
     for filename in filenames:    
         
