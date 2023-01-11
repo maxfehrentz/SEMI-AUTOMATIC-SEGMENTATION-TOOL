@@ -13,12 +13,14 @@ class COCOEvaluator(object):
         self.coco_dt = COCO(anno_dt_file)
         self._hack_coco_dt()
 
+    # TODO: figure out why this hack is necessary
     def _hack_coco_dt(self):
         for ann in self.coco_dt.dataset['annotations']:
             ann['score'] = 1.0
 
     def evaluate(self, iou_type='bbox'):
         coco_eval = COCOeval(self.coco_gt, self.coco_dt, iou_type)
+        # TODO: figure out how this works exactly and how to interpret the outputs
         coco_eval.evaluate()
         coco_eval.accumulate()
         coco_eval.summarize()
