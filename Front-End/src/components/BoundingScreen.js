@@ -318,7 +318,7 @@ export default function BoundingScreen() {
 
             // sending the image to the backend and receive the bounding boxes
             // TODO: shouldn't be localhost
-            axios.put("http://:8000/bounding-image", imageJson).then(
+            axios.put("http://localhost:8000/bounding-image", imageJson).then(
                 response => {
                     // TODO: check the status and do error handling
                     setBoundingBoxes(prevBoxes => {
