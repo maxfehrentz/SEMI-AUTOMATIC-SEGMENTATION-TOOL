@@ -16,7 +16,6 @@ from PIL import Image
 import numpy as np
 import cv2
 
-# TODO: might remove this later, check when saving of bounding boxes and masks is done
 from typing import List
 import json
 
@@ -37,22 +36,8 @@ sys.path.append(os.path.relpath("../FocalClick/isegm/inference/predictors"))
 from focalclick import FocalPredictor
 
 from pngs_to_coco import *
+from constants import *
 
-app = FastAPI()
-
-# allowing requests coming in from port 3000 (React Front-end)
-origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://10.168.67.36:3000"
-]
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # creating a data model for receiving the current image that was chosen in the frontend by the user in Base64 format
 # details on data models in FastAPI can be found here: https://fastapi.tiangolo.com/tutorial/body/
@@ -94,40 +79,37 @@ class ROI():
         self.bounding_box = bounding_box
         self.suggested_mask = suggested_mask
 
+
+app = FastAPI()
+
+# allowing requests coming in from port 3000 (React Front-end)
+origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://10.168.67.36:3000"
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # as np array 
-global current_bounding_image
-global current_filename
-global filenames
 current_bounding_image = None
 current_filename = ""
 filenames = []
 
 # as np array
-global current_segmentation_image
 current_segmentation_image = None
 
 # as pytorch tensors
-global mask
 mask = None
-global prev_mask
 prev_mask = None
 
 # dictionary of ROIs, key is the identifier, value is the ROI object
 rois = dict()
-
-# paths where to save the helper and output files
-# helper files
-tmp_folder = "./tmp"
-segment_folder = os.path.join(tmp_folder, "segments")
-path_to_segment = os.path.join(segment_folder, "current_segment.png")
-mask_folder = os.path.join(tmp_folder, "masks")
-image_folder = os.path.join(tmp_folder, "images")
-path_to_current_mask = os.path.join(mask_folder, "current_mask.png")
-path_to_prev_mask = os.path.join(mask_folder, "prev_mask.png")
-
-# output files
-# basically it is also a helper file as this will also be saved in a location specified in the frontend
-output_path = os.path.join(tmp_folder, "annotations.json")
 
 # create the necessary folders
 if not os.path.isdir(segment_folder):
@@ -141,16 +123,11 @@ clicks = []
 
 device = torch.device('cpu')
 
-# TODO: include instruction in the Readme where to find and download the model
-path_to_segmentation_model = "../FocalClick/models/focalclick/segformerB3_S2_comb.pth"
 net = load_is_model(path_to_segmentation_model, device)
 
 focal_click_predictor = FocalPredictor(net, device)
 
 # import and setup the mask r-cnn pretrained on wgisd and data from the AIRLab at Polimi by another student
-# for more information, contact riccardo.bertoglio@polimi.it
-path_to_cfg_file = "../Mask-RCNN/mask_rcnn_config.yaml"
-
 cfg = get_cfg()
 
 # setting the input format
@@ -161,15 +138,13 @@ cfg.merge_from_file(path_to_cfg_file)
 
 
 # # all this code has been replaced by the just loading the yaml file that this code created; left for future
-# # reference
+# # reference; note the TODO in case the Mask R-CNN is supposed to run on a GPU!
 
 # # get standard parameters for the configuration  
-# # TODO: dump all this in a yaml file that can be simply loaded in the future
 # model_file = "Misc/scratch_mask_rcnn_R_50_FPN_9x_gn.yaml" 
 # cfg.merge_from_file(model_zoo.get_config_file(model_file))
 
 # # loading the weights
-# # TODO: exclude this in the .gitignore and mention in the readme.md how to get it
 # cfg.MODEL.WEIGHTS = os.path.join("../Mask-RCNN/", "model_RGB.pth")
 
 # # run on a cpu
@@ -190,7 +165,6 @@ cfg.merge_from_file(path_to_cfg_file)
 # setting up the predictor for the Mask-RCNN
 mask_rcnn_predictor = DefaultPredictor(cfg)
 
-
 # TODO: better naming! this also saves the masks
 # TODO: create docstrings for the methods in the very end
 def update_segment(image, initial_mask = None):
@@ -204,7 +178,7 @@ def update_segment(image, initial_mask = None):
     # resetting the clicks
     clicks.clear()
 
-    # deleting all files
+    # deleting all relevant files related to the segment
     if os.path.isfile(path_to_segment):
         os.remove(path_to_segment)
     if os.path.isfile(path_to_current_mask):
@@ -214,9 +188,6 @@ def update_segment(image, initial_mask = None):
 
     # saving the segment
     cv2.imwrite(path_to_segment, cv2.cvtColor(current_segmentation_image, cv2.COLOR_RGB2BGR))
-
-    # TODO: think about saving mechanisms and folders: what should be saved permanently, what
-    # will be overridden during use?
 
     # resetting/initializing and saving the masks
     prev_mask = None
