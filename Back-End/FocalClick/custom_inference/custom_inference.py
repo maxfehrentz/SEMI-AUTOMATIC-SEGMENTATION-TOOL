@@ -6,7 +6,6 @@ import focalclick
 sys.path.append(os.path.relpath("../FocalClick/isegm/model"))
 import is_segformer_model
 sys.path.append(os.path.relpath("../FocalClick/models/focalclick"))
-import hrnet18s_S1_cclvs
 sys.path.append(os.path.relpath("../FocalClick/isegm/inference"))
 from clicker import Click
 
