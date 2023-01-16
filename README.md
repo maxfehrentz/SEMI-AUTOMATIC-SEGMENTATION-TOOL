@@ -24,8 +24,9 @@ Navigate to the [API folder](./Back-End/API) and run `uvicorn main:app --reload`
 ### Starting the front end
 Run `npm start` in the [front end folder](./Front-End). This command will start the front end of the application. Then open [http://localhost:3000](http://localhost:3000) to view it in your browser.
 
-### Using port-forwarding when running the tool on a server
-In case the tool does not run on the local machine but on a server, use port forwarding. Instead of connecting via `ssh user@server-address`, use `ssh -L 3000:localhost:3000 user@server-address`.
+### Running the tool on a server
+Note that the React front end will run on port 3000 and the python back end will run on port 8000 by default. In case the tool does not run on the local machine but on a server, use port forwarding. Instead of connecting via `ssh user@server-address`, use `ssh -L 3000:localhost:3000 -L 8000:localhost:8000 user@server-address`.
+In case you want to run front end and back end in the same docker container, it is necessary to publish those ports as well, so make sure to include `-p 3000:3000 -p 8000:8000` when starting the container. Moreover, instead of running `uvicorn main:app --reload`, use `uvicorn main:app --reload --host 0.0.0.0`
 
 ## User manual
 ### Annotation process
