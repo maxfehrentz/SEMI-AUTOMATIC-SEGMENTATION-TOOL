@@ -57,9 +57,20 @@ class SegFormer(nn.Module):
         if inference_mode:
             self.set_prediction_mode()
 
+    # NOTE: this method was used for loading ONLY segformer backbone weights during normal training and is not called when doing finetuning
     def load_pretrained_weights(self, path_to_weights= ' '):    
         backbone_state_dict = self.backbone.state_dict()
         pretrained_state_dict = torch.load(path_to_weights, map_location='cpu')
+        # TODO: the original code did not access the key 'state_dict' of pretrained_state_dict but the pretrained 
+        # segformer .pth file has an upper level key that makes that necessary;
+        # moreover, the .pth file has 'feature_extractor.backbone.' preprended to all expected keys
+        pretrained_state_dict = pretrained_state_dict['state_dict']
+        unwanted_prefix = "feature_extractor.backbone."
+        old_keys = pretrained_state_dict.copy().keys()
+        for old_key in old_keys:
+            if old_key.startswith(unwanted_prefix):
+                new_key = old_key[len(unwanted_prefix):]
+                pretrained_state_dict[new_key] = pretrained_state_dict.pop(old_key)
         ckpt_keys = set(pretrained_state_dict.keys())
         own_keys = set(backbone_state_dict.keys())
         missing_keys = own_keys - ckpt_keys

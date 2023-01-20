@@ -74,12 +74,16 @@ class SegFormerHead(nn.Module):
 
     def forward(self, inputs):
         #x = self._transform_inputs(inputs)  # len=4, 1/4,1/8,1/16,1/32
+
+        # takes the inputs of all four channels and saves them in c1-c4
+        # they are assumed to be 1/4,1/8,1/16,1/32 of the original resolution, with 1/4 corresponding to c1, 1/8 to c2 etc.
         x =  [inputs[i] for i in self.in_index]
         c1, c2, c3, c4 = x
 
         ############## MLP decoder on C1-C4 ###########
         n, _, h, w = c4.shape
 
+        # each input channel goes through a linear layer to unify the channel dimensions, then all are upscaled to the resoltion of c1 (1/4)
         _c4 = self.linear_c4(c4).permute(0,2,1).reshape(n, -1, c4.shape[2], c4.shape[3])
         _c4 = resize(_c4, size=c1.size()[2:],mode='bilinear',align_corners=False)
 
@@ -91,10 +95,14 @@ class SegFormerHead(nn.Module):
 
         _c1 = self.linear_c1(c1).permute(0,2,1).reshape(n, -1, c1.shape[2], c1.shape[3])
 
+        # after all channels are unified and upscaled to the same resolution, they are concatenated and fused by a ConvModule,
+        # consisting of convolution -> normalization -> activation
         _c = self.linear_fuse(torch.cat([_c4, _c3, _c2, _c1], dim=1))
 
         x = self.dropout(_c)
         feature = x
+
+        # the fused output goes through a final conv layer to obtain masks, one for each class
         x = self.linear_pred(x)
         return x,feature
 

@@ -11,6 +11,9 @@ prev_mask.png
 # exlude all temporary files
 tmp/
 
+# exclude finetuning logs
+finetuning/
+
 # node modules (can be installed based on package.json via npm install)
 node_modules/
 

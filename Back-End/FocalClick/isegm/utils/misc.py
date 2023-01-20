@@ -1,7 +1,9 @@
 import torch
 import numpy as np
 
-from log import logger
+# those package names are relative to where the training/fine-tuning script is located; this is necessary because
+# of pythons relative import system, see https://stackoverflow.com/questions/14132789/relative-imports-for-the-billionth-time
+from isegm.utils.log import logger
 
 
 def get_dims_with_exclusion(dim, exclude=None):

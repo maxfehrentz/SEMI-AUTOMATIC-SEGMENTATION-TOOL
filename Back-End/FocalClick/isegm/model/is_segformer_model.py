@@ -2,11 +2,11 @@ import torch.nn as nn
 import torch
 import torch.nn.functional as F
 from isegm.utils.serialization import serialize
-from is_model import ISModel
+from isegm.model.is_model import ISModel
 from isegm.model.ops import DistMaps, ScaleLayer, BatchImageNormalize
-from modeling.hrnet_ocr import HighResolutionNet
+from isegm.model.modeling.hrnet_ocr import HighResolutionNet
 from isegm.model.modifiers import LRMult
-from modeling.segformer.segformer_model import SegFormer
+from isegm.model.modeling.segformer.segformer_model import SegFormer
 from mmcv.cnn import ConvModule, DepthwiseSeparableConvModule
 import torchvision.ops.roi_align as roi_align
 from isegm.model.ops import DistMaps
@@ -87,6 +87,7 @@ class SegFormerModel(ISModel):
             small_image = image
             small_coord_features = coord_features
 
+        # I guess this is where those first networks would come into play that are in the paper? but it's commented out for some reason
         #small_coord_features = self.maps_transform(small_coord_features)
         outputs = self.backbone_forward( small_image, small_coord_features)
 

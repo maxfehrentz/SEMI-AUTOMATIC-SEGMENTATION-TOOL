@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch
 import torch.nn.functional as F
 
-from serialization import serialize
+from isegm.utils.serialization import serialize
 from .is_model import ISModel
 from .modeling.hrnet_ocr import HighResolutionNet
 from isegm.model.modifiers import LRMult

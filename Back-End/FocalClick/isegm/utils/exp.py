@@ -98,6 +98,7 @@ def init_experiment(args, model_name):
         logger.info('Run experiment with config:')
         logger.info(pprint.pformat(cfg, indent=4))
 
+    cfg.device = torch.device("cpu")
     return cfg
 
 

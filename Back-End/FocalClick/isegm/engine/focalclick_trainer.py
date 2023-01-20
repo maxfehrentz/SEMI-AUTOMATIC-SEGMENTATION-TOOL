@@ -19,6 +19,10 @@ from .optimizer import get_optimizer
 from torch.cuda.amp import autocast as autocast, GradScaler
 scaler = GradScaler()
 
+from torchviz import make_dot
+
+import math
+
 class ISTrainer(object):
     def __init__(self, model, cfg, model_cfg, loss_cfg,
                  trainset, valset,
@@ -48,6 +52,7 @@ class ISTrainer(object):
         self.click_models = click_models
         self.prev_mask_drop_prob = prev_mask_drop_prob
 
+        # TODO: check if this actually runs on GPU when deployed on server
         if cfg.distributed:
             cfg.batch_size //= cfg.ngpus
             cfg.val_batch_size //= cfg.ngpus
@@ -122,8 +127,8 @@ class ISTrainer(object):
         logger.info(f'Total Epochs: {num_epochs}')
         for epoch in range(start_epoch, num_epochs):
             self.training(epoch)
-            #if validation:
-            #    self.validation(epoch)
+            if validation:
+               self.validation(epoch)
 
     def training(self, epoch):
         if self.sw is None and self.is_master:
@@ -306,6 +311,9 @@ class ISTrainer(object):
             bboxes = torch.chunk(rois,rois.shape[0],dim=0)
             #print( len(bboxes), bboxes[0].shape, rois.shape  )
             refine_output = self.net.refine(images_focus, points_focus, full_feature, full_logits, bboxes)
+
+            # print("about to create visualization")
+            # make_dot(refine_output['instances_refined'], params=dict(list(self.net.named_parameters()))).render("visualization", format="png")
 
             loss = 0.0
             loss = self.add_loss('instance_loss', loss, losses_logging, validation,
