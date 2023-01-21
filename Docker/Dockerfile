@@ -7,9 +7,9 @@ RUN ln -sv /usr/bin/python3.8 /usr/bin/python
 
 # create a non-root user
 # add group fehrentz
-RUN groupadd -g 5011 fehrentz 
+RUN groupadd -g 6001 fehrentz
 # add user fehrentz with groups fehrentz, create /home/fehrentz directory
-RUN useradd -u 5011 -d /home/fehrentz -m -g 5011 --groups fehrentz
+RUN useradd -u 6001 -d /home/fehrentz -m -g 6001 fehrentz
 # RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 USER fehrentz
 WORKDIR /home/fehrentz
