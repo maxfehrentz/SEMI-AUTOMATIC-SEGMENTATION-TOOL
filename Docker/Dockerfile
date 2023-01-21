@@ -1,22 +1,15 @@
 FROM nvidia/cuda:11.6.2-cudnn8-devel-ubuntu18.04
 
-# fix for changed keys found in https://github.com/NVIDIA/nvidia-docker/issues/1631
-RUN rm /etc/apt/sources.list.d/cuda.list
-RUN rm /etc/apt/sources.list.d/nvidia-ml.list
-RUN apt-key del 7fa2af80
-RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub
-RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64/7fa2af80.pub
-
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update && apt-get install -y \
 	build-essential ca-certificates python3.8 python3.8-dev python3.8-distutils git wget sudo cmake curl libssl-dev
 RUN ln -sv /usr/bin/python3.8 /usr/bin/python
 
 # create a non-root user
-# add group bertoglio
-RUN groupadd -g 5011 bertoglio 
-# add user fehrentz with groups bertoglio, create /home/fehrentz directory
-RUN useradd -u 5011 -d /home/fehrentz -m -g 5011 --groups bertoglio
+# add group fehrentz
+RUN groupadd -g 5011 fehrentz 
+# add user fehrentz with groups fehrentz, create /home/fehrentz directory
+RUN useradd -u 5011 -d /home/fehrentz -m -g 5011 --groups fehrentz
 # RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 USER fehrentz
 WORKDIR /home/fehrentz
