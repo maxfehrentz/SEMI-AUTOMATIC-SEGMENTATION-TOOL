@@ -87,7 +87,7 @@ def finetune(model, cfg, model_cfg):
         min_object_area=1000,
         keep_background_prob=0.05,
         points_sampler=points_sampler,
-        epoch_len=30000,
+        epoch_len=240,
         stuff_prob=0.1
     )
 
@@ -97,17 +97,17 @@ def finetune(model, cfg, model_cfg):
         augmentator=val_augmentator,
         min_object_area=1000,
         points_sampler=points_sampler,
-        epoch_len=2000
+        epoch_len=32
     )
 
     optimizer_params = {
         # TODO: decrease learning rate and number of epochs? hyperparameter search
-        'lr': 5e-3, 'betas': (0.9, 0.999), 'eps': 1e-8
+        'lr': 5e-4, 'betas': (0.9, 0.999), 'eps': 1e-8
     }
 
     # decreases the lr at the given milestones by the factor gamma
     lr_scheduler = partial(torch.optim.lr_scheduler.MultiStepLR,
-                           milestones=[190, 210], gamma=0.1)
+                           milestones=[150, 200], gamma=0.1)
 
     trainer = ISTrainer(model, cfg, model_cfg, loss_cfg,
                         trainset_coco, valset,
@@ -120,4 +120,4 @@ def finetune(model, cfg, model_cfg):
                         max_interactive_points=model_cfg.num_max_points,
                         max_num_next_clicks=3)
 
-    trainer.run(num_epochs=230)
+    trainer.run(num_epochs=115)

@@ -3,5 +3,5 @@
 EXPS_PATH: "./Back-End/FocalClick/finetuning/experiments"
 
 # TODO: adapt this and mention in README
-COCO_PATH: "/Users/max/Documents/Studium/Semester7/Thesis/instance_segmentantion_datasets/red_globe_2021_07-27_09-06_split/red_globe_2021_07-27_09-06_train_val"
-SEGFORMER_B3: "/Users/max/Documents/Studium/Semester7/Thesis/Semi_automatic_segmentation_tool/Back-End/FocalClick/models/focalclick/segformerB3_S2_comb.pth"
+COCO_PATH: "/exp/red_globe_2021_07-27_09-06_train_val"
+SEGFORMER_B3: "/exp/SEMI-AUTOMATIC-SEGMENTATION-TOOL/Back-End/FocalClick/models/focalclick/segformerB3_S2_comb.pth"

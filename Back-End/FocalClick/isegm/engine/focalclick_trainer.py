@@ -21,8 +21,6 @@ scaler = GradScaler()
 
 from torchviz import make_dot
 
-import math
-
 class ISTrainer(object):
     def __init__(self, model, cfg, model_cfg, loss_cfg,
                  trainset, valset,
@@ -230,7 +228,7 @@ class ISTrainer(object):
         self.net.eval()
         for i, batch_data in enumerate(tbar):
             global_step = epoch * len(self.val_data) + i
-            loss, batch_losses_logging, splitted_batch_data, outputs = \
+            loss, batch_losses_logging, splitted_batch_data, outputs, _ = \
                 self.batch_forward(batch_data, validation=True)
 
             batch_losses_logging['overall'] = loss

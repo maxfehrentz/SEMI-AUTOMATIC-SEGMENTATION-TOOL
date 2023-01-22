@@ -21,6 +21,13 @@ node_modules/
 model_RGB.pth
 segformerB3_S2_comb.pth
 
+.idea/
+.config.yml.swp
+package-lock.json
+
+# exclude detectron2 that has to be pulled from git
+detectron2/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
