@@ -73,7 +73,7 @@ export default function AnnotationChoiceScreen() {
                 <h1>
                     The .json file with COCO-formated annotations is being created.
                     <br/>
-                    Another window will open where the contents of that file are visualized.
+                    The contents of that file are visualized, point your browser to http://&lt;current_ip&gt;:5151
                 </h1>
             </div>   
             } 
