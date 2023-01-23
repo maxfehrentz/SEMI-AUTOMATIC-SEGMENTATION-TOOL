@@ -121,7 +121,7 @@ if not os.path.isdir(image_folder):
 
 clicks = []
 
-device = torch.device('cpu')
+device = torch.device('cuda:0')
 
 net = load_is_model(path_to_segmentation_model, device)
 

@@ -233,15 +233,14 @@ class FocalPredictor(object):
 
 
     def progressive_merge(self, pred_mask, y, x):
-        diff_regions = np.logical_xor(self.prev_prediction[0][0], pred_mask)
-        diff_regions = diff_regions.numpy()
+        diff_regions = np.logical_xor(self.prev_prediction.cpu().numpy()[0][0], pred_mask)
         num, labels = cv2.connectedComponents(diff_regions.astype(np.uint8))
         label = labels[y,x]
         corr_mask = labels == label
         if self.prev_prediction[0][0][y,x] == 1:
-            progressive_mask = np.logical_and(self.prev_prediction[0][0], np.logical_not(corr_mask))
+            progressive_mask = np.logical_and(self.prev_prediction.cpu().numpy()[0][0], np.logical_not(corr_mask))
         else:
-            progressive_mask = np.logical_or(self.prev_prediction[0][0], corr_mask)
+            progressive_mask = np.logical_or(self.prev_prediction.cpu().numpy()[0][0], corr_mask)
         return progressive_mask
 
 
