@@ -122,12 +122,13 @@ class FocalPredictor(object):
         focus_pred = self._get_refine(pred_logits,image_full, clicks, feature, focus_roi, focus_roi_in_global_roi)#.cpu().numpy()[0, 0]
         focus_pred = F.interpolate(focus_pred,(y2-y1,x2-x1),mode='bilinear',align_corners=True)#.cpu().numpy()[0, 0]
         
-        # only after 10 clicks the focus prediction is merged with the PREVIOUS mask, otherwise, the focus predictino is merged with the coarse
+        # only after 10 clicks the focus prediction was merged with the PREVIOUS mask, otherwise, the focus prediction was merged with the coarse
         # prediction from before, therefore allowing global change
-        # TODO: EXPERIMENT WITH THIS ON GRAPES AND ADJUST; default was 10
-        if len(clicks) > 5:
-            coarse_mask = self.prev_prediction
-            coarse_mask  = torch.log( coarse_mask/(1-coarse_mask)  )
+        # NOTE: this feature has been disabled for now as it facilitated the annotation process for our use case
+        # # TODO: EXPERIMENT WITH THIS ON GRAPES AND ADJUST; default was 10
+        # if len(clicks) > 5:
+        #     coarse_mask = self.prev_prediction
+        #     coarse_mask  = torch.log( coarse_mask/(1-coarse_mask)  )
         coarse_mask[:,:,y1:y2,x1:x2] =  focus_pred
         coarse_mask = torch.sigmoid(coarse_mask)
         

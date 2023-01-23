@@ -34,7 +34,7 @@ export default function AnnotationChoiceScreen() {
         the browser, only the handle and the handle cannot be passed to the backend */ 
         setLoading(true);
         axios.get(
-            `http://localhost:8000/coco-annotations`       
+            `https://${window.location.hostname}:8000/coco-annotations`
         ).then(async response => {
 
             const descriptor = {
@@ -55,7 +55,7 @@ export default function AnnotationChoiceScreen() {
             then navigate back to the start
             */
             location.state = null;
-            axios.post("http://localhost:8000/annotation-process-finished").then( _ => {
+            axios.post(`https://${window.location.hostname}:8000/annotation-process-finished`).then( _ => {
                 navigate("/");
             });
         });

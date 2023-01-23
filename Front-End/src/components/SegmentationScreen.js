@@ -132,7 +132,7 @@ export default function SegmentationScreen() {
         const id = ids[currentIndex];
 
         axios.get(
-            `http://localhost:8000/segments/${id}`       
+            `https://${window.location.hostname}:8000/segments/${id}`
         ).then(response => {
             // excepting the image segment and optionally a suggested mask
             // TODO: deal with the case that backend offers no mask suggestion
@@ -292,7 +292,7 @@ export default function SegmentationScreen() {
 
                 // communicate click to backend
                 axios.post(
-                    `http://localhost:8000/clicks/`, 
+                    `https://${window.location.hostname}:8000/clicks/`,
                     pointJson
                 ).then(
                     response => {
@@ -332,7 +332,7 @@ export default function SegmentationScreen() {
         // first, notify the backend to reset the mask
         // TODO: think about those resets again
         axios.post(
-            `http://localhost:8000/reset-segmentation/`        
+            `https://${window.location.hostname}:8000/reset-segmentation/`
         ).then(() => {
             setPoints(prevPoints => {
                 return [];
@@ -344,7 +344,7 @@ export default function SegmentationScreen() {
 
     const rollbackPrevClick = () => {
         axios.get(
-            `http://localhost:8000/rollBackClick/`        
+            `https://${window.location.hostname}:8000/rollBackClick/`
         ).then(response => {
             // expecting the previous mask in base64 format
             const currentMask = new Image();
@@ -416,11 +416,11 @@ export default function SegmentationScreen() {
 
     const nextSegment = () => {
         // TODO: do proper error handling
-        axios.post(`http://localhost:8000/mask-finished/${ids[currentIndex]}`).then(_ => {
+        axios.post(`https://${window.location.hostname}:8000/mask-finished/${ids[currentIndex]}`).then(_ => {
             // tell the backend to reset clicks and mask
             // TODO: clear that up, what is exactly being reset
             axios.post(
-                `http://localhost:8000/reset-segmentation/`        
+                `https://${window.location.hostname}:8000/reset-segmentation/`
             ).then(() => {
                 if(lastSegment) {
                     // TODO: reset everything else that might have to be reseted

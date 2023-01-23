@@ -82,15 +82,9 @@ class ROI():
 
 app = FastAPI()
 
-# allowing requests coming in from port 3000 (React Front-end)
-origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://10.168.67.36:3000"
-]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

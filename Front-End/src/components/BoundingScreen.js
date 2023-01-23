@@ -134,7 +134,7 @@ export default function BoundingScreen() {
         // create new endpoint for that (but isn't the reset already done automatically?)
 
         // axios.post(
-        //     `http://localhost:8000/reset/`        
+        //     `http://localhosth:8000/reset/`
         // ).then(() => {
             if (!currentImage) {
                 return;
@@ -317,8 +317,7 @@ export default function BoundingScreen() {
             setLoading(true);
 
             // sending the image to the backend and receive the bounding boxes
-            // TODO: shouldn't be localhost
-            axios.put("http://localhost:8000/bounding-image", imageJson).then(
+            axios.put(`https://${window.location.hostname}:8000/bounding-image`, imageJson).then(
                 response => {
                     // TODO: check the status and do error handling
                     setBoundingBoxes(prevBoxes => {
@@ -759,7 +758,7 @@ export default function BoundingScreen() {
         const boundingBoxesJson = {bounding_boxes: boxesRelativeToOriginalImage};
 
         // send final state of the boxes to the backend
-        axios.put("http://localhost:8000/bounding-boxes", boundingBoxesJson).then(_ => {
+        axios.put(`https://${window.location.hostname}:8000/bounding-boxes`, boundingBoxesJson).then(_ => {
                 // ignoring the response, bc ending up here means status ok
                 // counting up the index so screen is prepared for the next image
                 fileIndex.current += 1;

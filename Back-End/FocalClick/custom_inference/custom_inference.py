@@ -34,7 +34,8 @@ def compute_mask(image, clicks, prev_mask, predictor,
         index += 1
         click_list.append(new_click)
 
-    progressive_mode = True
+    # NOTE: progressive mode is turned off! There will be no progressive merge
+    progressive_mode = False
 
     with torch.no_grad():
         # preparing the predictor

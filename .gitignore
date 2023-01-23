@@ -28,6 +28,9 @@ package-lock.json
 # exclude detectron2 that has to be pulled from git
 detectron2/
 
+# ignore the ssl stuff to run via https
+ssl/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
