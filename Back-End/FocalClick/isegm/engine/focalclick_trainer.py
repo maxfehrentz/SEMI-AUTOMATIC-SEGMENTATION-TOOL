@@ -50,7 +50,6 @@ class ISTrainer(object):
         self.click_models = click_models
         self.prev_mask_drop_prob = prev_mask_drop_prob
 
-        # TODO: check if this actually runs on GPU when deployed on server
         if cfg.distributed:
             cfg.batch_size //= cfg.ngpus
             cfg.val_batch_size //= cfg.ngpus
@@ -69,6 +68,8 @@ class ISTrainer(object):
 
         self.trainset = trainset
         self.valset = valset
+
+        self.PATIENCE = 3
 
         logger.info(f'Dataset of {trainset.get_samples_number()} samples was loaded for training.')
         logger.info(f'Dataset of {valset.get_samples_number()} samples was loaded for validation.')
@@ -123,10 +124,20 @@ class ISTrainer(object):
 
         logger.info(f'Starting Epoch: {start_epoch}')
         logger.info(f'Total Epochs: {num_epochs}')
+        patience = self.PATIENCE
+        val_loss = 0
         for epoch in range(start_epoch, num_epochs):
             self.training(epoch)
             if validation:
-               self.validation(epoch)
+               new_val_loss = self.validation(epoch)
+               if new_val_loss < val_loss:
+                   patience -= 1
+                   if patience == 0:
+                       print(f"Early stopping in epoch {epoch}")
+                       return
+                else:
+                    patience = self.PATIENCE
+                val_loss = new_val_loss
 
     def training(self, epoch):
         if self.sw is None and self.is_master:
@@ -251,6 +262,9 @@ class ISTrainer(object):
             for metric in self.val_metrics:
                 self.sw.add_scalar(tag=f'{log_prefix}Metrics/{metric.name}', value=metric.get_epoch_value(),
                                    global_step=epoch, disable_avg=True)
+
+        return val_loss
+
 
     def batch_forward(self, batch_data, validation=False):
         metrics = self.val_metrics if validation else self.train_metrics
