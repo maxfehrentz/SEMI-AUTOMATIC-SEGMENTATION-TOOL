@@ -6,7 +6,6 @@ import importlib.util
 
 import torch
 
-import sys
 from isegm.utils.exp import init_experiment
 
 
@@ -25,7 +24,7 @@ def main():
     torch.backends.cudnn.benchmark = True
     torch.multiprocessing.set_sharing_strategy('file_system')
 
-    model_script.main(cfg, args.freeze-unification, args.freeze-fusion, args.freeze-pred)
+    model_script.main(cfg)
 
 
 def parse_args():
@@ -33,15 +32,6 @@ def parse_args():
 
     parser.add_argument('model_path', type=str,
                         help='Path to the model script.')
-
-    parser.add_argument('--freeze-unification', type=bool, default = '0'
-                        help='0 or 1, 1 means freezing the four dimension unification MLPs in the decoder head')   
-
-    parser.add_argument('--freeze-fusion', type=bool, default = '0'
-                        help='0 or 1, 1 means freezing the ConvModule that fuses the outputs of the unification MLPs in the decoder head')
-    
-    parser.add_argument('--freeze-pred', type=bool, default = '0'
-                        help='0 or 1, 1 means freezing the final MLP that predicts the masks in the decoder head')         
 
     parser.add_argument('--exp-name', type=str, default='',
                         help='Here you can specify the name of the experiment. '

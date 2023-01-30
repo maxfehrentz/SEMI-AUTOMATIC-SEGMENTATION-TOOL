@@ -5,3 +5,12 @@ EXPS_PATH: "./Back-End/FocalClick/finetuning/experiments"
 # TODO: adapt this and mention in README
 COCO_PATH: "/exp/red_globe_2021_07-27_09-06_train_val"
 SEGFORMER_B3: "/exp/SEMI-AUTOMATIC-SEGMENTATION-TOOL/Back-End/FocalClick/models/focalclick/segformerB3_S2_comb.pth"
+
+CHECKPOINTS_PATH: "/exp/SEMI-AUTOMATIC-SEGMENTATION-TOOL/Back-End/FocalClick/finetuning/checkpoints"
+VIS_PATH: "/exp/SEMI-AUTOMATIC-SEGMENTATION-TOOL/Back-End/FocalClick/finetuning/visualization"
+LOGS_PATH: "/exp/SEMI-AUTOMATIC-SEGMENTATION-TOOL/Back-End/FocalClick/finetuning/experiments/logs"
+
+# this is a different visualization than the one above; this is visualization of the hyperparameter search, above is
+# about the actual training
+OPTUNA_VIS_PATH: "/exp/SEMI-AUTOMATIC-SEGMENTATION-TOOL/Back-End/FocalClick/finetuning/optuna/visualization"
+OPTUNA_SUM_PATH: "/exp/SEMI-AUTOMATIC-SEGMENTATION-TOOL/Back-End/FocalClick/finetuning/optuna/summary"

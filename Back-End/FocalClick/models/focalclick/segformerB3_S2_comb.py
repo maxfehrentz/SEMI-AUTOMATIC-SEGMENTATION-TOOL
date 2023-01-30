@@ -6,56 +6,29 @@ from isegm.data.aligned_augmentation import AlignedAugmentator
 from isegm.engine.focalclick_trainer import ISTrainer
 import torch.nn as nn
 
+import optuna
+from optuna.trial import TrialState
+import optuna.visualization
+
+import os
+
+
 MODEL_NAME = 'segformerB3_S2_comb'
 
-def main(cfg, freeze_unification, freeze_fusion, freeze_pred):
-    model, model_cfg = init_model(cfg)
-    finetune(model, cfg, model_cfg, freeze_unification, freeze_fusion, freeze_pred)
+def main(cfg):
+    model_cfg = init_model()
+    finetune(cfg, model_cfg)
 
 
-def init_model(cfg):
+def init_model():
     model_cfg = edict()
     model_cfg.crop_size = (256, 256)
     model_cfg.num_max_points = 24
+    return model_cfg
 
-    # SegFormerModel includes networks before (maps_transform) and after (refine) the actual SegFormer as shown in the FocalClick paper
-    model = SegFormerModel( pipeline_version = 's2', model_version = 'b3',
-                       use_leaky_relu=True, use_rgb_conv=False, use_disks=True, norm_radius=5, binary_prev_mask=False,
-                       with_prev_mask=True, with_aux_output=True)
-
-    print(f"current device: {cfg.device}")
-
-    model.to(cfg.device)
-
-    return model, model_cfg
-
-def finetune(model, cfg, model_cfg, freeze_unification, freeze_fusion, freeze_pred):
+def finetune(cfg, model_cfg):
     # setting the weight config with the path provided in the config file
     cfg.weights = cfg.SEGFORMER_B3
-
-    # freeze everything but the decoder head
-    transform = model.maps_transform
-    encoder_backbone = model.feature_extractor.backbone
-    refiner = model.refiner
-    components = [transform, encoder_backbone, refiner]
-    for component in components:
-        for param in component.parameters():
-            param.requires_grad = False
-
-    # freeze components of the decoder head as specified in the args, passed to the main method
-    decoder_head = model.feature_extractor.decode_head
-    if freeze_unification:
-        mlps = [decoder_head.linear_c1, decoder_head.linear_c2, decoder_head.linear_c3, decoder_head.linear_c4]
-        for mlp in mlps:
-            for param in mlp.parameters():
-                param.requires_grad = False
-    if freeze_fusion:
-        for param in decoder_head.linear_fuse.parameters():
-            param.requires_grad = False
-    if freeze_pred:
-        for param in decoder_head.linear_pred.parameters():
-            param.requires_grad = False
-
 
     cfg.batch_size = 28 if cfg.batch_size < 1 else cfg.batch_size
     cfg.val_batch_size = cfg.batch_size
@@ -116,24 +89,65 @@ def finetune(model, cfg, model_cfg, freeze_unification, freeze_fusion, freeze_pr
         epoch_len=32
     )
 
-    optimizer_params = {
-        # TODO: decrease learning rate and number of epochs? hyperparameter search
-        'lr': 5e-3, 'betas': (0.9, 0.999), 'eps': 1e-8
-    }
-
-    # decreases the lr at the given milestones by the factor gamma
-    lr_scheduler = partial(torch.optim.lr_scheduler.MultiStepLR,
-                           milestones=[100, 125], gamma=0.1)
-
-    trainer = ISTrainer(model, cfg, model_cfg, loss_cfg,
+    trainer = ISTrainer(cfg, model_cfg, loss_cfg,
                         trainset_coco, valset,
-                        optimizer='adam',
-                        optimizer_params=optimizer_params,
-                        lr_scheduler=lr_scheduler,
-                        checkpoint_interval=[(0, 50), (200, 5)],
+                        checkpoint_interval=10,
                         image_dump_interval=500,
                         metrics=[AdaptiveIoU()],
                         max_interactive_points=model_cfg.num_max_points,
                         max_num_next_clicks=3)
 
-    trainer.run(num_epochs=150)
+    # using Optuna trick as suggested here: https://www.kaggle.com/general/261870
+    func = lambda trial: trainer.objective(trial, num_epochs = 300)
+
+    # TODO: first trial, take out early stopping, high epochs, 20-25 n_trials
+    # starting hyperparameter search
+    study = optuna.create_study(direction = 'minimize')
+    study.optimize(func, n_trials = 5)
+
+    # taken from https://github.com/optuna/optuna-examples/blob/main/pytorch/pytorch_simple.py
+    pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])
+    complete_trials = study.get_trials(deepcopy=False, states=[TrialState.COMPLETE])
+
+    # saving opuna output
+    summary_path = os.path.abspath(cfg.OPTUNA_SUM_PATH)
+    if not os.path.isdir(summary_path):
+        os.makedirs(summary_path)
+    with open(os.path.join(summary_path, "summary.txt"), 'w') as sum_file:
+
+        sum_file.write("Study statistics: \n")
+        sum_file.write(f"  Number of finished trials: {len(study.trials)}\n")
+        sum_file.write(f"  Number of pruned trials: {len(pruned_trials)}\n")
+        sum_file.write(f"  Number of complete trials: {len(complete_trials)}\n")
+
+        sum_file.write("Best trial:\n")
+        trial = study.best_trial
+
+        sum_file.write(f"  Value: {trial.value}")
+
+        sum_file.write("  Params: \n")
+        for key, value in trial.params.items():
+            sum_file.write("    {}: {}\n".format(key, value))
+
+    # visualization
+    vis_path = os.path.abspath(cfg.OPTUNA_VIS_PATH)
+    if not os.path.isdir(vis_path):
+        os.makedirs(vis_path)
+
+    fig = optuna.visualization.plot_contour(study)
+    fig.write_image(os.path.join(vis_path, "contour.png"))
+
+    fig = optuna.visualization.plot_intermediate_values(study)
+    fig.write_image(os.path.join(vis_path, "intermediate_values.png"))
+
+    fig = optuna.visualization.plot_parallel_coordinate(study)
+    fig.write_image(os.path.join(vis_path, "parallel_coordinate.png"))
+
+    fig = optuna.visualization.plot_param_importances(study)
+    fig.write_image(os.path.join(vis_path, "param_importance.png"))
+
+    # fig = optuna.visualization.plot_pareto_front(study)
+    # fig.write_image(os.path.join(vis_path, "pareto_front"), format="png")
+
+    fig = optuna.visualization.plot_slice(study)
+    fig.write_image(os.path.join(vis_path, "slice_plot.png"))

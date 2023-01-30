@@ -116,8 +116,9 @@ class ISDataset(torch.utils.data.dataset.Dataset):
                         return output
                     else:
                         index = np.random.randint(len(self.dataset_samples)-1)
-            except:
+            except Exception as e:
                 print("failed to get item")
+                print(e)
                 index = np.random.randint(len(self.dataset_samples)-1)
 
 
