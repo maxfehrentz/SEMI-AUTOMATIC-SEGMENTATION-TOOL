@@ -35,6 +35,9 @@ export default function SegmentationScreen() {
     // state to enable/disable the rollback button; we only allow to rollback one step
     const [rollbackDisabled, setRollbackDisabled] = useState(true);
 
+    // state to enable/disable the next segment button; we only allow to go further when the backend is ready
+    const [nextDisabled, setNextDisabled] = useState(false);
+
     // state to show loading animation 
     const [loading, setLoading] = useState(false);
     
@@ -109,9 +112,6 @@ export default function SegmentationScreen() {
     
     useEffect(() => {
 
-        // when the index changes, the segment changes and we can clean up the screen and reset everything
-        clearCanvas();
-
         /* 
         when the user works on the last segment (currentIndex is the last index in the ids array), we want
         to display another text, because by pressing "next" he will finish the segmentation for this image
@@ -138,6 +138,9 @@ export default function SegmentationScreen() {
             // TODO: deal with the case that backend offers no mask suggestion
             const currentMask = new Image();
             const currentImage = new Image();
+
+            // clean up the screen and reset everything
+            clearCanvas();
 
             currentMask.onload = function() {
                 setRollbackDisabled(true);
@@ -415,6 +418,8 @@ export default function SegmentationScreen() {
 
 
     const nextSegment = () => {
+        // disable button until backend is ready to continue
+        setNextDisabled(true);
         // TODO: do proper error handling
         axios.post(`https://${window.location.hostname}:8000/mask-finished/${ids[currentIndex]}`).then(_ => {
             // tell the backend to reset clicks and mask
@@ -428,6 +433,7 @@ export default function SegmentationScreen() {
                 }
                 else {
                     setCurrentIndex(prevIndex => {return prevIndex + 1});
+                    setNextDisabled(false)
                 }
             })
         })
@@ -488,7 +494,7 @@ export default function SegmentationScreen() {
             <button className="button_segmentation" onClick={rollbackPrevClick} disabled={rollbackDisabled}>
 	        	Remove previous point
 	        </button>
-            <button className="button_segmentation" onClick={nextSegment}>
+            <button className="button_segmentation" onClick={nextSegment} disabled={nextDisabled}>
 	        	{proceedButtonText}
 	        </button>
         </div>
