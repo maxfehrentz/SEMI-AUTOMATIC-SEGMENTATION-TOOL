@@ -6,7 +6,7 @@ import numpy as np
 import sys
 import os
 sys.path.append(os.path.relpath("../FocalClick/isegm/inference"))
-from clicker import Click
+from ..clicker import Click
 from .base import BaseTransform
 import torch.nn.functional as F
 

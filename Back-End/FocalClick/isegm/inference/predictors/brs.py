@@ -3,7 +3,7 @@ import torch.nn.functional as F
 import numpy as np
 from scipy.optimize import fmin_l_bfgs_b
 
-from base import BasePredictor
+from .base import BasePredictor
 
 
 class BRSBasePredictor(BasePredictor):

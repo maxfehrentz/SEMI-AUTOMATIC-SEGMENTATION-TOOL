@@ -1,8 +1,8 @@
-from cdnet import DiffisionPredictor
-from baseline import BaselinePredictor
-from focalclick import FocalPredictor
-from brs import InputBRSPredictor, FeatureBRSPredictor, HRNetFeatureBRSPredictor
-from brs_functors import InputOptimizer, ScaleBiasOptimizer
+from isegm.inference.predictors.cdnet import DiffisionPredictor
+from isegm.inference.predictors.baseline import BaselinePredictor
+from isegm.inference.predictors.focalclick import FocalPredictor
+from isegm.inference.predictors.brs import InputBRSPredictor, FeatureBRSPredictor, HRNetFeatureBRSPredictor
+from isegm.inference.predictors.brs_functors import InputOptimizer, ScaleBiasOptimizer
 from isegm.inference.transforms import ZoomIn
 from isegm.model.is_hrnet_model import HRNetModel
 

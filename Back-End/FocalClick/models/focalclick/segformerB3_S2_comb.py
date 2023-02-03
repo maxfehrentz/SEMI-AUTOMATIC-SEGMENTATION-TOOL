@@ -68,9 +68,9 @@ def finetune(cfg, model_cfg):
                                        use_hierarchy=False,
                                        first_click_center=True)
 
-    # the path to trainset and valset is the same COCO_PATH because the data will be loaded differentiated by the split argument
+    # the path to trainset and valset is the same PATH because the data will be loaded differentiated by the split argument
     trainset_coco = CocoDataset(
-        cfg.COCO_PATH,
+        cfg.RED_GLOBE_TRAIN_VAL,
         split='train',
         augmentator=train_augmentator,
         min_object_area=1000,
@@ -81,7 +81,7 @@ def finetune(cfg, model_cfg):
     )
 
     valset = CocoDataset(
-        cfg.COCO_PATH,
+        cfg.REG_GLOBE_TRAIN_VAL,
         split='val',
         augmentator=val_augmentator,
         min_object_area=1000,

@@ -5,9 +5,9 @@ from typing import List
 import sys
 import os
 sys.path.append(os.path.relpath("../FocalClick/isegm/inference"))
-from clicker import Click
+from ..clicker import Click
 sys.path.append(os.path.relpath("../FocalClick/isegm/utils"))
-from misc import get_bbox_iou, get_bbox_from_mask, expand_bbox, clamp_bbox
+from isegm.utils.misc import get_bbox_iou, get_bbox_from_mask, expand_bbox, clamp_bbox
 from .base import BaseTransform
 
 

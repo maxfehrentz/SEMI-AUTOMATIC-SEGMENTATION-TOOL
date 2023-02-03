@@ -7,7 +7,7 @@ from typing import List
 import sys
 import os
 sys.path.append(os.path.relpath("../FocalClick/isegm/inference"))
-from clicker import Click
+from ..clicker import Click
 from .base import BaseTransform
 
 

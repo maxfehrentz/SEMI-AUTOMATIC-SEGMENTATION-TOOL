@@ -11,8 +11,9 @@ import sys
 import os
 # IMPORTANT: the relative path is relative to the importing file!!! since utils.py is imported in main.py, the path is relative to the location of main.py!
 # TODO: this is highly undesirable, check if there is a better solution for this mess
-sys.path.append(os.path.relpath("../FocalClick/isegm/utils"))
-from serialization import load_model
+sys.path.append(os.path.relpath("../FocalClick"))
+from isegm.utils.serialization import load_model
+from isegm.data.datasets.coco import CocoDataset
 
 
 def get_time_metrics(all_ious, elapsed_time):
@@ -54,7 +55,17 @@ def load_single_is_model(state_dict, device, **kwargs):
 
 
 def get_dataset(dataset_name, cfg):
-    if dataset_name == 'GrabCut':
+    print(f"dataset_name: {dataset_name}")
+    if dataset_name == "Red_Globe_Val":
+        print("getting the red globe val dataset")
+        dataset = CocoDataset(cfg.RED_GLOBE_TRAIN_VAL, split="val")
+    elif dataset_name == "Red_Globe_Test":
+        print("getting the red globe test dataset")
+        dataset = CocoDataset(cfg.RED_GLOBE_TRAIN_TEST, split="test")
+    elif dataset_name == "WGISD":
+        print("getting the whole wgisd test dataset")
+        dataset = CocoDataset(cfg.WGISD, split="test")
+    elif dataset_name == 'GrabCut':
         dataset = GrabCutDataset(cfg.GRABCUT_PATH)
     elif dataset_name == 'Berkeley':
         dataset = BerkeleyDataset(cfg.BERKELEY_PATH)

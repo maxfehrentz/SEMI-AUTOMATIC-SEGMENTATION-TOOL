@@ -30,10 +30,14 @@ def evaluate_dataset(dataset, predictor, vis = True, vis_path = './experiments/v
         save_dir = None
 
     start_time = time()
+    print(f"len of dataset: {len(dataset)}")
     for index in tqdm(range(len(dataset)), leave=False):
         sample = dataset.get_sample(index)
 
-        _, sample_ious, _ = evaluate_sample(sample.image, sample.gt_mask, sample.init_mask, predictor,
+        # each sample can have several gt masks for several instances
+        for id in sample.objects_ids:
+
+            _, sample_ious, _ = evaluate_sample(sample.image, sample.get_object_mask(id), sample.init_mask, predictor,
                                             sample_id=index, vis= vis, save_dir = save_dir,
                                             index = index, **kwargs)
         all_ious.append(sample_ious)
@@ -77,7 +81,7 @@ def evaluate_sample(image, gt_mask, init_mask, predictor, max_iou_thr,
         for click_indx in range(max_clicks):
             vis_pred = prev_mask
             clicker.make_next_click(pred_mask)
-            pred_probs = predictor.get_prediction(clicker)
+            pred_probs = predictor.get_prediction(clicker.get_clicks())
             pred_mask = pred_probs > pred_thr
 
             if progressive_mode:

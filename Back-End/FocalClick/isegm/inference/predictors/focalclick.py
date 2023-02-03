@@ -6,10 +6,9 @@ import cv2
 
 import sys
 import os
-sys.path.append(os.path.relpath("../FocalClick/isegm/inference"))
-from transforms import AddHorizontalFlip, SigmoidForPred, LimitLongestSide, ResizeTrans
-sys.path.append(os.path.relpath("../FocalClick/isegm/utils"))
-from crop_local import  map_point_in_bbox,get_focus_cropv1, get_focus_cropv2, get_object_crop, get_click_crop
+sys.path.append(os.path.relpath("../FocalClick"))
+from isegm.inference.transforms import AddHorizontalFlip, SigmoidForPred, LimitLongestSide, ResizeTrans
+from isegm.utils.crop_local import  map_point_in_bbox,get_focus_cropv1, get_focus_cropv2, get_object_crop, get_click_crop
 
 
 class FocalPredictor(object):
