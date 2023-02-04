@@ -881,7 +881,10 @@ export default function BoundingScreen() {
                         e.preventDefault();
                         setAnchorPoint({ x: e.clientX, y: e.clientY });
                         // only showing the menu when the user is hovering over a box
-                        if (highlightedId !== null) {
+                        if (highlightedId !== null
+                                && !(isDrawing.current)
+                                && indexOfMovingBox === null
+                                && indexOfScalingBox === null) {
                             toggleMenu(true);
                         }
                     }}>
