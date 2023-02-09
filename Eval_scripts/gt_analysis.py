@@ -1,6 +1,8 @@
 # this file can be used to load an annotation and compare it to the ground truth
 import sys, os
 import fiftyone as fo
+from fiftyone.utils.eval.segmentation import evaluate_segmentations
+from fiftyone.core.fields import IntField
 import json
 
 def main(argv):
@@ -38,8 +40,6 @@ def main(argv):
                     labels_path=tmp_updated_annotations_path,
                     include_id=True)
                 datasets.append(coco_dataset)
-                print(f"info about dataset: {coco_dataset}")
-                print(f"first sample: {coco_dataset.first()}")
 
             else:
                 print(f"The given path {annotation_file_path} does not lead to a file.")
@@ -50,15 +50,65 @@ def main(argv):
         gt_dataset = datasets[0]
         pred_dataset = datasets[1]
         
+        pred_field = "pred_segmentations"
         for gt_sample in gt_dataset:
             # for each sample in the gt, we need to find the corresponding one in the predictions
             # performance bottleneck!!! 
             file_path = gt_sample["filepath"]
             for pred_sample in pred_dataset:
                 if pred_sample["filepath"] == file_path:
-                    gt_sample["pred_segmentations"] = pred_sample["segmentations"]
+                    gt_sample[pred_field] = pred_sample["segmentations"]
                     gt_sample.save()
                     break
+
+
+        # iterating over several IoU threshold
+        thresholds = [0.5, 0.75, 0.85]
+        for threshold in thresholds:
+
+            # constructing eval_key based on the threshold
+            eval_key = f"IoU_{threshold}".replace(".", "_")
+
+            # adding some eval information that will be visible as well
+            results = gt_dataset.evaluate_detections(pred_field, 
+                gt_field="segmentations", 
+                eval_key=eval_key,
+                iou=threshold,
+                use_masks=True)
+    
+            # ious
+            ious = results.ious
+            # removing None values for predictions that did not match any instances
+            filtered_ious = list(filter(lambda x: x is not None, ious))
+            avg_iou_tps = sum(filtered_ious) / len(filtered_ious)
+            avg_iou_all = sum(filtered_ious) / len(ious)
+            print(f"avg_iou_tps: {round(avg_iou_tps, 2)}")
+            print(f"avg_iou_all: {round(avg_iou_all, 2)}")
+
+            # tp, fp, fn
+            # this returns lists, one value for each sample
+            tps = gt_dataset.values(eval_key + "_tp")
+            fps = gt_dataset.values(eval_key + "_fp")
+            fns = gt_dataset.values(eval_key + "_fn")
+
+            # go through all samples and compute precision and recall
+            for index in range(len(tps)):
+                tp = tps[index]
+                fp = fps[index]
+                fn = fns[index]
+                print(f"True positives: {tp}")
+                print(f"False positives: {fp}")
+                print(f"False negatives: {fn}")
+                print(f"Instances identified: {tp + fp}")
+                print(f"Instances in ground truth: {tp + fn}")
+
+                # precision and recall
+                precision = tp / (tp + fp)
+                recall = tp  / (tp + fn)
+                f1 = (2 * (precision * recall)) / (precision + recall)
+                print(f"Precision @{threshold}: {round(precision, 2)}")
+                print(f"Recall @{threshold}: {round(recall, 2)}")
+                print(f"F1 score @{threshold}: {round(f1, 2)}")
 
         # starting a fiftyone session in a separate window to inspect the annotations
         session = fo.launch_app(gt_dataset)
