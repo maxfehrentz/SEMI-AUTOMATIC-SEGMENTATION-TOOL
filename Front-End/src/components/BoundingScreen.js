@@ -117,7 +117,7 @@ export default function BoundingScreen() {
             }
         }
 
-    }, []);
+    }, [location, navigate]);
 
 
     const doubleScreenDensitiy = canvas => {
@@ -198,60 +198,39 @@ export default function BoundingScreen() {
     }, [boundingBoxes, highlightedId, indexOfScalingBox, indexOfMovingBox])
 
 
-    // TODO: this should probably be part of the previous bounding box hook
     useEffect(() => {
-        clearCanvas2();
-
         // getting the context of the canvas
         const ctx = ctxRef2.current;
-        ctx.strokeStyle = "red";
 
-        for (const boundingBox of boundingBoxes) {
-            // simply drawing the bounding box again
-            ctx.strokeRect(boundingBox.x, boundingBox.y, boundingBox.width, boundingBox.height);
-
-            // if it is the bounding box that is being hovered over, fill it with transparent red color
-            if (boundingBox.id === highlightedId) {
-
-                // if the user is rescaling, highlight the corners of the highlighted box
-                if(indexOfScalingBox !== null) {
-                    // TODO: move those constants into a separate constants file
-                    const radius = 5;
-                    ctx.fillStyle = "rgba( 255, 0, 0, 0.6 )";
-                    
-                    ctx.beginPath();
-                    console.log(`top left x: ${topLeft.current.x}`);
-                    console.log(`top left y: ${topLeft.current.y}`);
-                    ctx.arc(topLeft.current.x, topLeft.current.y, radius, 0, 2 * Math.PI, false);
-                    ctx.fill();
-                    
-                    ctx.beginPath();
-                    console.log(`top right x: ${topRight.current.x}`);
-                    console.log(`top right y: ${topRight.current.y}`);
-                    ctx.arc(topRight.current.x, topRight.current.y, radius, 0, 2 * Math.PI, false);
-                    ctx.fill();
-                    
-                    ctx.beginPath();
-                    ctx.arc(bottomLeft.current.x, bottomLeft.current.y, radius, 0, 2 * Math.PI, false);
-                    ctx.fill();
-                    
-                    ctx.beginPath();
-                    ctx.arc(bottomRight.current.x, bottomRight.current.y, radius, 0, 2 * Math.PI, false);
-                    ctx.fill();
-                    
-                }
-
-                ctx.fillStyle = "rgba( 255, 0, 0, 0.3 )";
-
-            }
-            else {
-                ctx.fillStyle = "transparent";
-            }
-
-            ctx.fillRect(boundingBox.x, boundingBox.y, boundingBox.width, boundingBox.height);
+        // if the user is rescaling, highlight the corners of the highlighted box
+        console.log(`index of scaling box: ${indexOfScalingBox}`);
+        if(indexOfScalingBox !== null) {
+            // TODO: move those constants into a separate constants file
+            const radius = 5;
+            ctx.fillStyle = "rgba( 255, 0, 0, 0.6 )";
+            
+            ctx.beginPath();
+            console.log(`top left x: ${topLeft.current.x}`);
+            console.log(`top left y: ${topLeft.current.y}`);
+            ctx.arc(topLeft.current.x, topLeft.current.y, radius, 0, 2 * Math.PI, false);
+            ctx.fill();
+            
+            ctx.beginPath();
+            console.log(`top right x: ${topRight.current.x}`);
+            console.log(`top right y: ${topRight.current.y}`);
+            ctx.arc(topRight.current.x, topRight.current.y, radius, 0, 2 * Math.PI, false);
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.arc(bottomLeft.current.x, bottomLeft.current.y, radius, 0, 2 * Math.PI, false);
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.arc(bottomRight.current.x, bottomRight.current.y, radius, 0, 2 * Math.PI, false);
+            ctx.fill();
+            
         }
-
-    }, [highlightedId, indexOfScalingBox])
+    }, [indexOfScalingBox])
 
 
     /* 
@@ -614,7 +593,6 @@ export default function BoundingScreen() {
                 var y = 0;
                 var width = 0;
                 var height = 0;
-                const id = boxId;
 
                 if (cornerOfScalingBox.current === "topLeft") {
                     // "anchor" during the scaling is bottom right
@@ -648,7 +626,7 @@ export default function BoundingScreen() {
                     console.log("the chosen corner does not exist")
                 }
 
-                var {x, y, width, height} = adjustBoxWhenMouseLeavesImage(x, y, width, height);
+                ({x, y, width, height} = adjustBoxWhenMouseLeavesImage(x, y, width, height));
 
                 setBoundingBoxes(prevBoxes => {
                     prevBoxes[indexOfScalingBox] = {
@@ -718,7 +696,7 @@ export default function BoundingScreen() {
                 var width = xMouse - originBoxX.current;
                 var height = translatedY - originBoxY.current;
 
-                var {x, y, width, height} = adjustBoxWhenMouseLeavesImage(x, y, width, height);
+                ({x, y, width, height} = adjustBoxWhenMouseLeavesImage(x, y, width, height));
 
                 prevBoxes.push( 
                     {
@@ -800,7 +778,7 @@ export default function BoundingScreen() {
     const moveBox = () => {
         var index = 0;
         for (const box of boundingBoxes) {
-            const {x, y, width, height, id} = box;
+            const {id} = box;
             if (id === highlightedId) {
                 setIndexOfMovingBox(index);
             }

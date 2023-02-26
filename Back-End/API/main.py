@@ -115,7 +115,8 @@ if not os.path.isdir(image_folder):
 
 clicks = []
 
-device = torch.device('cuda:0')
+# device = torch.device('cuda:0')
+device = torch.device('cpu')
 
 net = load_is_model(path_to_segmentation_model, device)
 
@@ -217,6 +218,9 @@ async def update_bounding_image(imageBase64: ImageBase64):
     success = cv2.imwrite(path_to_image, cv2.cvtColor(current_bounding_image, cv2.COLOR_RGB2BGR))
     if not success:
         raise Exception("Writing the image failed!")
+
+    # remove the fourth channel if there is one (e.g. PNGs)
+    current_bounding_image = current_bounding_image[:, :, :3]
 
     image_height, image_width, _ = np.shape(current_bounding_image)
 

@@ -40,7 +40,8 @@ def create_COCO_annotations(output_path, filenames, masks_path):
 # Get "images" and "annotations" info 
 def images_annotations_info(masks_path, filenames):
     # This id will be automatically increased as we go
-    annotation_id = 0
+    # annotation_id starts at 1, as this seems to be the default expected by some programs for visualization/evaluation
+    annotation_id = 1
     image_id = 0
     annotations = []
     images = []
