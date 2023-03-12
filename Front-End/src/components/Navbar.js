@@ -2,7 +2,6 @@ import {Link} from 'react-router-dom';
 import './Navbar.css';
 
 // adapted from https://www.youtube.com/watch?v=DO-pSysGItQ
-// TODO: create a CSS file to make this look prettier
 const Navbar = () => {
     return (
         <nav className="navbar">

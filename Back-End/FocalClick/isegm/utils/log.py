@@ -6,8 +6,6 @@ from datetime import datetime
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 
-# TODO: fix this! I had to install Tensorboard here because I want to make it run and don't quite know what it is used for, but this code has to be cleaned
-# and unnecessary dependencies need to be removed
 LOGGER_NAME = 'root'
 LOGGER_DATEFMT = '%Y-%m-%d %H:%M:%S'
 

@@ -178,7 +178,7 @@ class ISTrainer(object):
         logger.info(f'Starting Epoch: {start_epoch}')
         logger.info(f'Total Epochs: {num_epochs}')
 
-        # TODO: commenting out early stopping for now, put back later
+        # deactivate early stopping for now
         # patience = self.PATIENCE
         # val_loss = 0
         self.trial_description = ", ".join([f"{k}={v}" for k, v in trial.params.items()])
@@ -522,7 +522,6 @@ class ISTrainer(object):
             else:
                 raise RuntimeError(f"=> no checkpoint found at '{self.cfg.weights}'")
         elif self.cfg.resume_exp is not None:
-            # TODO: CHECKPOINTS_PATH might have to be adjusted for this
             checkpoints = list(self.cfg.CHECKPOINTS_PATH.glob(f'{self.cfg.resume_prefix}*.pth'))
             assert len(checkpoints) == 1
 

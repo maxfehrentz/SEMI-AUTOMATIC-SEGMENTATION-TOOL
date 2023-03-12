@@ -13,10 +13,6 @@ import '@szhsin/react-menu/dist/transitions/slide.css';
 import Slider from '@mui/material/Slider';
 
 
-/*
- TODO: figure out how to deal with all the code duplication (e.g. for loading the image; maybe those hooks
-    can be generalized and moved to separate files)
- */
 export default function BoundingScreen() {
 
     const canvasRef1 = useRef(null);
@@ -73,7 +69,6 @@ export default function BoundingScreen() {
     const bottomLeft = useRef(null);
     const bottomRight = useRef(null);
     // values: "topleft", "topright", "bottomleft", "bottomright"
-    // TODO: solve this more elegantly
     const cornerOfScalingBox = useRef(null);
 
     // tracking which box the user is hovering over
@@ -130,8 +125,6 @@ export default function BoundingScreen() {
 
 
     useEffect(() => {
-        // TODO: differentiate between reset for segmentation and masks and reset for bounding boxes
-        // create new endpoint for that (but isn't the reset already done automatically?)
 
         // axios.post(
         //     `http://localhosth:8000/reset/`
@@ -205,7 +198,6 @@ export default function BoundingScreen() {
         // if the user is rescaling, highlight the corners of the highlighted box
         console.log(`index of scaling box: ${indexOfScalingBox}`);
         if(indexOfScalingBox !== null) {
-            // TODO: move those constants into a separate constants file
             const radius = 5;
             ctx.fillStyle = "rgba( 255, 0, 0, 0.6 )";
             
@@ -233,10 +225,6 @@ export default function BoundingScreen() {
     }, [indexOfScalingBox])
 
 
-    /* 
-    TODO: unclear when stuff is "cleared", "resetted", etc.; make this better and settle on a
-    convention where cleaning is happening, e.g. only in hooks, only in custom functions, ...?
-    */
 	const clearEverything = () => {
 
 		ctxRef1.current.clearRect(
@@ -298,7 +286,6 @@ export default function BoundingScreen() {
             // sending the image to the backend and receive the bounding boxes
             axios.put(`https://${window.location.hostname}:8000/bounding-image`, imageJson).then(
                 response => {
-                    // TODO: check the status and do error handling
                     setBoundingBoxes(prevBoxes => {
 
                         // need to transform the format (x1,y1,x2,y2,identifier) (x1,y1,width,height,identifier)
@@ -307,7 +294,6 @@ export default function BoundingScreen() {
                         for (const box of arrayOfBoxes) {
                             // coordinates are relative to the image, therefore adapting
                             // to scaling and shifts necessary
-                            // TODO: bounding boxes are very narrow, maybe scale them by some factor like 1.1?
                             newBoxes.push(
                                 {
                                 x: (box[0] * currentScale.current + centerShiftX.current), 
@@ -318,10 +304,6 @@ export default function BoundingScreen() {
                                 }
                             );
                         }
-                        /* 
-                        TODO: this will only work if the user cannot create boxes already during loading of the
-                        mask rcnn boxes
-                        */
                         newBoxes = prevBoxes.concat(newBoxes);
                         availableId.current = newBoxes.length;
 
@@ -341,10 +323,8 @@ export default function BoundingScreen() {
 
     const loadFiles = async () => {
         // removing everything
-        // TODO: find a cleaner solution to make this go hand-in-hand with the resets
         clearEverything();
 
-        // TODO: make sure to accept only .jpeg, .png, .jpg
         fileHandles.current = await window.showOpenFilePicker({multiple: true});
 
         // take the first handle
@@ -356,7 +336,6 @@ export default function BoundingScreen() {
 
     // need to adjust for squishing on the y-axis, see SegmentationScreen.js for more explanation on this
     // also need to adjust for the offset on the y-axis caused by the slider on top!
-    // TODO: also implement this for x; there might be images wider than the screen at some point
     const translateY = (y) => {
         const canvas2 = canvasRef2.current;
         const rect = canvas2.getBoundingClientRect();
@@ -387,7 +366,6 @@ export default function BoundingScreen() {
         }
         else if (indexOfScalingBox !== null) {
             // if the user already chose a corner before, this second click finishes the process
-            // TODO: this is duplicate code from the else statement below, maybe move
             if(cornerOfScalingBox.current !== null) {
                 setIndexOfScalingBox(null);
                 cornerOfScalingBox.current = null;
@@ -402,7 +380,6 @@ export default function BoundingScreen() {
 
             // the process was started by chosing "Scale" in the right click custom context menu
             // checking if the user clicked close to one of the corners
-            // TODO: move tolerance to a constant file
             const tolerance = 10;
 
             // disabling the button during rescaling; action will be reversed in case user did not target one of the corners
@@ -716,7 +693,6 @@ export default function BoundingScreen() {
     const moveToSegmentation = async () => {
 
         // prepare the bounding boxes to be sent to the backend
-        // TODO: generalize this in a separate file
         const boxesRelativeToOriginalImage = [];
         for (const box of boundingBoxes) {
             // coordinates are relative to the image, therefore adapting
@@ -732,7 +708,6 @@ export default function BoundingScreen() {
             );
         }
 
-        // TODO: make front-end/frontend and back-end/backend consistent
         const boundingBoxesJson = {bounding_boxes: boxesRelativeToOriginalImage};
 
         // send final state of the boxes to the backend
@@ -748,7 +723,6 @@ export default function BoundingScreen() {
         ).catch(error => {
             console.log(`error with code ${error.response.status} occurred while trying to send the final
             bounding boxes to the backend`);
-            // TODO: show this in the web app?
         });
     }
 

@@ -1,7 +1,6 @@
 import numpy as np
 import cv2
 
-# TODO: make sure that this is needed, otherwise unnecessary dep
 from skimage.measure import label   
 
 def map_point_in_bbox(y,x,y1,y2,x1,x2,crop_l):

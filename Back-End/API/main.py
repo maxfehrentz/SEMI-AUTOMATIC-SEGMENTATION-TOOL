@@ -160,8 +160,6 @@ cfg.merge_from_file(path_to_cfg_file)
 # setting up the predictor for the Mask-RCNN
 mask_rcnn_predictor = DefaultPredictor(cfg)
 
-# TODO: better naming! this also saves the masks
-# TODO: create docstrings for the methods in the very end
 def update_segment(image, initial_mask = None):
     global current_segmentation_image
     global mask
@@ -196,7 +194,6 @@ def update_segment(image, initial_mask = None):
 
 
 @app.put("/bounding-image")
-# TODO: find more suitable name than "bounding image"
 async def update_bounding_image(imageBase64: ImageBase64):
     global current_bounding_image
     global current_filename
@@ -237,8 +234,6 @@ async def update_bounding_image(imageBase64: ImageBase64):
     boxes_tensors = instances.get("pred_boxes").tensor
     # while it will not be returned now, it is also important to extract the masks as well
     masks_tensors = instances.get("pred_masks")
-
-    # TODO: also implement retrieving the predicted classes and make it potentially multiclass in the ROI class
 
     # the boxes receive unique ids
     boxes_with_id = []
@@ -320,9 +315,6 @@ async def add_click(click: Click):
     return encoded_image
 
 
-# TODO: reset needs to become specific for segmentation; might have to implement a reset for
-# the bounding as well
-
 # leaves the image part that is being segmented but resets the clicks and the mask
 @app.post("/reset-segmentation/")
 async def reset_segmentation():
@@ -346,7 +338,6 @@ async def reset_segmentation():
 
 
 # way for the frontend to communicate that a mask is finished
-# TODO: some urls are with -, others use Camel case; figure out what's the right convention
 @app.post("/mask-finished/{id}")
 async def mask_finished(id):
 
@@ -489,7 +480,6 @@ async def save_bounding_boxes_from_frontend(bounding_box_list: BoundingBoxList):
 @app.get("/segments/{id}")
 async def get_segment_with(id: int):
     
-    # TODO: do error handling here in case nonsense ids are being passed
     print(f"id requested: {id}")
 
     x_origin = int(rois.get(id).bounding_box[0])
@@ -540,7 +530,6 @@ async def get_coco_annotations():
         coco_as_string = json_file.read()
 
     # Load COCO-formated json file
-    # TODO: the classes need to be generalized
     coco_dataset = fo.Dataset.from_dir(
         dataset_type=fo.types.COCODetectionDataset,
         data_path=image_folder,
@@ -565,7 +554,6 @@ def delete_tmp():
 # an annotation process here starts with picking the images to be annotated and ends with saving the annotations
 @app.post("/annotation-process-finished")
 async def full_reset():
-    # TODO: figure out if those globals are necessary or if defining that in the very start is enough
     global current_bounding_image
     global current_filename
     global filenames

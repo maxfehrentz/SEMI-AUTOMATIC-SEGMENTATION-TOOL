@@ -124,14 +124,14 @@ class FocalPredictor(object):
         # only after 10 clicks the focus prediction was merged with the PREVIOUS mask, otherwise, the focus prediction was merged with the coarse
         # prediction from before, therefore allowing global change
         # NOTE: this feature has been disabled for now as it facilitated the annotation process for our use case
-        # # TODO: EXPERIMENT WITH THIS ON GRAPES AND ADJUST; default was 10
+        # EXPERIMENT WITH THIS ON SPECIFIC USE CASE AND ADJUST; default was 10
         # if len(clicks) > 5:
         #     coarse_mask = self.prev_prediction
         #     coarse_mask  = torch.log( coarse_mask/(1-coarse_mask)  )
         coarse_mask[:,:,y1:y2,x1:x2] =  focus_pred
         coarse_mask = torch.sigmoid(coarse_mask)
         
-        # TODO: might have to change this later but for now, all the previous mask setting should be done from outside, don't want this file
+        # all the previous mask setting should be done from outside, don't want this file
         # to hold its own state and introduce a second source of truth
         # self.prev_prediction = coarse_mask
         self.transforms[0]._prev_probs = coarse_mask.cpu().numpy()

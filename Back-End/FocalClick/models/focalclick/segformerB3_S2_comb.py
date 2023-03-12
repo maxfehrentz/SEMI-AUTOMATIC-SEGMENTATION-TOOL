@@ -100,7 +100,6 @@ def finetune(cfg, model_cfg):
     # using Optuna trick as suggested here: https://www.kaggle.com/general/261870
     func = lambda trial: trainer.objective(trial, num_epochs = 300)
 
-    # TODO: first trial, take out early stopping, high epochs, 20-25 n_trials
     # starting hyperparameter search
     study = optuna.create_study(direction = 'minimize')
     study.optimize(func, n_trials = 5)

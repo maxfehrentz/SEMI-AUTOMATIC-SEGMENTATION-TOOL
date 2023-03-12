@@ -24,7 +24,6 @@ export default function SegmentationScreen() {
     tracking the current segment; the index will move through the array of ids, retrieving the ids
     over time while the user annotates the individual segments
     */
-    // TODO: check that this does not crash when passing no ids from the previous screen
     const [currentIndex, setCurrentIndex] = useState(0);
 
     const canvasRef1 = useRef(null);
@@ -125,7 +124,6 @@ export default function SegmentationScreen() {
         when all segments are done, the currentIndex will be equal to the length of the ids array and it is done
         */
         if (currentIndex === ids.length) {
-            // TODO: throw error, should never happen because we navigate before
             return
         }
 
@@ -135,7 +133,6 @@ export default function SegmentationScreen() {
             `https://${window.location.hostname}:8000/segments/${id}`
         ).then(response => {
             // excepting the image segment and optionally a suggested mask
-            // TODO: deal with the case that backend offers no mask suggestion
             const currentMask = new Image();
             const currentImage = new Image();
 
@@ -166,10 +163,6 @@ export default function SegmentationScreen() {
     
 
     useEffect(() => {
-        /* 
-        TODO: maybe cleaning should not be here? was very hard to debug why the canvas is being cleaned
-        settle on one place where those kind of UI updates are made
-        */
         ctxRef2.current.clearRect(
 			0,
 			0,
@@ -187,7 +180,6 @@ export default function SegmentationScreen() {
 
 
     useEffect(() => {
-        // TODO: code duplication with BoundingScreen.js; find better solution
         if (!currentImage) {
             return;
         }
@@ -242,13 +234,11 @@ export default function SegmentationScreen() {
 
 
     const addPositivePoint = ({nativeEvent}) => {
-        // TODO: solve this with an enum, not strings
         addPoint({nativeEvent}, "positive")
     }
 
 
     const addNegativePoint = ({nativeEvent}) => {
-        // TODO: same as for positive point
         addPoint({nativeEvent}, "negative")
     }
 
@@ -265,7 +255,6 @@ export default function SegmentationScreen() {
         therefore, a translation relative to the actual box of the rendered canvas is necessary
         adapted from https://stackoverflow.com/questions/57910824/js-using-wrong-coordinates-when-drawing-on-canvas-with-margin
         */
-        // TODO: this translation back to image-relative coordinates should be moved to a file and imported
         const canvas2 = canvasRef2.current;
         const rect = canvas2.getBoundingClientRect();
         // the mouse is relative to the whole screen; therefore there is an offset caused by the sliders on top
@@ -330,10 +319,8 @@ export default function SegmentationScreen() {
 
 
     // used when the user wants to start from scratch
-    // TODO: implement also the option to start from the suggested mask again
     const clearMaskAndPoints = () => {
         // first, notify the backend to reset the mask
-        // TODO: think about those resets again
         axios.post(
             `https://${window.location.hostname}:8000/reset-segmentation/`
         ).then(() => {
@@ -420,15 +407,12 @@ export default function SegmentationScreen() {
     const nextSegment = () => {
         // disable button until backend is ready to continue
         setNextDisabled(true);
-        // TODO: do proper error handling
         axios.post(`https://${window.location.hostname}:8000/mask-finished/${ids[currentIndex]}`).then(_ => {
             // tell the backend to reset clicks and mask
-            // TODO: clear that up, what is exactly being reset
             axios.post(
                 `https://${window.location.hostname}:8000/reset-segmentation/`
             ).then(() => {
                 if(lastSegment) {
-                    // TODO: reset everything else that might have to be reseted
                     navigate("/bounding", { state: state });
                 }
                 else {

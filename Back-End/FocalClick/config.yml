@@ -2,7 +2,6 @@
 
 EXPS_PATH: "/exp/SEMI-AUTOMATIC-SEGMENTATION-TOOL//Back-End/FocalClick/finetuning/experiments"
 
-# TODO: change structure of dataset?
 REG_GLOBE_TRAIN_VAL: "/exp/red_globe_2021_07-27_09-06_train_val"
 RED_GLOBE_TRAIN_TEST: "/exp/red_globe_2021_07-27_09-06_train_test"
 WGISD : "/exp/wgisd"

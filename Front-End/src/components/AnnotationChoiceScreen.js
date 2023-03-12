@@ -42,7 +42,6 @@ export default function AnnotationChoiceScreen() {
                 mode: "readwrite"
             }
             const permissionState = await handle.requestPermission(descriptor)
-            // TODO: check the permissionState
             console.log(`permission state: ${permissionState}`);
 
             const writeableStream = await handle.createWritable();
@@ -62,7 +61,6 @@ export default function AnnotationChoiceScreen() {
     }
 
 
-    // TODO: navigate back when everything is saved and don't forget to reset all the file handles that might be saved in location!
 
     return (
         <div className="center">

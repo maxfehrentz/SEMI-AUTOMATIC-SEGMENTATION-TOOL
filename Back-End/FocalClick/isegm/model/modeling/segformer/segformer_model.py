@@ -61,7 +61,7 @@ class SegFormer(nn.Module):
     def load_pretrained_weights(self, path_to_weights= ' '):    
         backbone_state_dict = self.backbone.state_dict()
         pretrained_state_dict = torch.load(path_to_weights, map_location='cpu')
-        # TODO: the original code did not access the key 'state_dict' of pretrained_state_dict but the pretrained 
+        # the original code did not access the key 'state_dict' of pretrained_state_dict but the pretrained 
         # segformer .pth file has an upper level key that makes that necessary;
         # moreover, the .pth file has 'feature_extractor.backbone.' preprended to all expected keys
         pretrained_state_dict = pretrained_state_dict['state_dict']

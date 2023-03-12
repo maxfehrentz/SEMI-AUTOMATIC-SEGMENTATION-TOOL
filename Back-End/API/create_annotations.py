@@ -17,14 +17,11 @@ def create_sub_mask_annotation(sub_mask):
     # and not find contours
     contours = measure.find_contours(np.array(sub_mask[:, :, 0]), 0.5, positive_orientation="low")
 
-    # TODO: check if the COCO annotations actually make sense; see if there is a way to translate back
-
     polygons = []
     segmentations = []
     for contour in contours:
         # Flip from (row, col) representation to (x, y)
         # and subtract the padding pixel
-        # TODO: maybe remove the padding pixel? not sure if they are necessary anymore
         for i in range(len(contour)):
             row, col = contour[i]
             contour[i] = (col - 1, row - 1)

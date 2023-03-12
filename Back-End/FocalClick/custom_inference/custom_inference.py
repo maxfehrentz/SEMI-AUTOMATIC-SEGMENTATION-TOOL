@@ -48,7 +48,6 @@ def compute_mask(image, clicks, prev_mask, predictor,
         # first return value is just the threshold, ignore that
         _, pred_mask = cv2.threshold(pred_probs, pred_thr, 1, cv2.THRESH_BINARY)
 
-        # TODO: EXPERIMENT with this number
         if progressive_mode and len(click_list) > 10:
             last_click = click_list[-1]
             last_x, last_y = last_click.coords[1], last_click.coords[0]
