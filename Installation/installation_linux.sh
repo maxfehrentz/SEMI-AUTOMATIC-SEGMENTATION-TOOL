@@ -10,6 +10,7 @@ nvm install v14.20.1
 
 # Create virtual environment
 pip install virtualenv
+apt install python3.8-venv
 python3 -m venv ./venv
 source venv/bin/activate
 

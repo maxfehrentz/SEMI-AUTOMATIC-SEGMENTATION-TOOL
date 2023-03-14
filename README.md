@@ -23,6 +23,7 @@ The tool can be either installed by a script or by manually executing the comman
     - this finally installs npm and Node.js v14.20.1: `nvm install v14.20.1`
 - Create a virtual environment in the root folder.
     - `pip install virtualenv`
+    - for Linux: `apt install python3.8-venv`
     - `python3 -m venv ./venv`
     - `source venv/bin/activate`
 - Execute `pip install -r ./Docker/requirements.txt` in the root folder to get the requirements for the back end listed in **requirements.txt**. For macOS, comment out the NVIDIA dependencies. They are only used on Linux for training on a NVIDIA GPU. For both platforms, run `git clone https://github.com/facebookresearch/detectron2.git` and `python -m pip install -e detectron2` in the root folder.
@@ -40,7 +41,8 @@ In order for some functionalities to work, HTTPS is required. To run the applica
 - `openssl genpkey -algorithm RSA -out private.key -aes256`
 - `openssl req -new -x509 -key private.key -out selfsigned.crt`
 - `openssl rsa -in private.key -out private-without-passphrase.key`
-Note that you have to pick a passphrase for the initial private key
+
+Note that you have to pick a passphrase for the initial private key.
 
 ### Starting the back end
 Activate the virtual environment in the root folder with `source venv/bin/activate`. Navigate to the [API folder](./Back-End/API) and run `uvicorn main:app --host 0.0.0.0 --ssl-keyfile ../../ssl/private-without-passphrase.key --ssl-certfile ../../ssl/selfsigned.crt`. Note that depending on whether you want to run the tool on GPU or CPU, the torch.device needs to be adjusted accordingly in **main.py** in the [API folder](./Back-End/API).
