@@ -9,9 +9,8 @@ source ~/.nvm/nvm.sh
 nvm install v14.20.1
 
 # Create virtual environment
-pip install virtualenv
-sudo apt-get install python3-venv
-python3 -m venv ./venv
+sudo apt-get install python3.8-venv
+python3.8 -m venv ./venv
 source venv/bin/activate
 
 # Install backend requirements

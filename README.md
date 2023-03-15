@@ -1,9 +1,9 @@
 # A Semi-Automatic Segmentation Tool
 
-The tool in its current state works on grape bunch instance segmentation. It suggests masks and lets the user refine it via the iterative click-based method FocalClick. Make sure to use the Chrome browser.
+The tool in its current state works on grape bunch instance segmentation. It suggests masks and lets the user refine it via the iterative click-based method FocalClick.
 
 ## Installation on Linux and MacOS
-The tool can be either installed by a script or by manually executing the commands.
+The tool can be either installed by a script or by manually executing the commands. Make sure to use the Chrome browser and Python 3.8.
 
 ### Installation script
 - Clone the repo.
@@ -23,11 +23,11 @@ The tool can be either installed by a script or by manually executing the comman
     - this finally installs npm and Node.js v14.20.1: `nvm install v14.20.1`
 - Create a virtual environment in the root folder.
     - `pip install virtualenv`
-    - for Linux: `apt install python3.8-venv`
-    - `python3 -m venv ./venv`
+    - for Linux: `sudo apt-get install python3.8-venv`
+    - `python3.8 -m venv ./venv`
     - `source venv/bin/activate`
-- Execute `pip install -r ./Docker/requirements.txt` in the root folder to get the requirements for the back end listed in **requirements.txt**. For macOS, comment out the NVIDIA dependencies. They are only used on Linux for training on a NVIDIA GPU. For both platforms, run `git clone https://github.com/facebookresearch/detectron2.git` and `python -m pip install -e detectron2` in the root folder.
-- Run `npm install` to install all requirements for the frontend (defined in **package.json**).
+- Execute `pip install -r ./Docker/requirements.txt` in the root folder to get the requirements for the back end listed in **requirements.txt**. For macOS or when not using a NVIDIA GPU, comment out the NVIDIA dependencies. They are only used on Linux for running the tool on a NVIDIA GPU. For both platforms, run `git clone https://github.com/facebookresearch/detectron2.git` and `python -m pip install -e detectron2` in the root folder.
+- Run `npm install` in the [front end folder](./Front-End) to install all requirements for the frontend (defined in **package.json**).
 - Download the models that are required
     - Download the segformer model for FocalClick from [here](https://drive.google.com/file/d/1DkFun_tiw7z7RpjDtwqV65k1e9jxnLkr/view?usp=share_link), place it in [Back-End/FocalClick/models/focalclick](./Back-End/FocalClick/models/focalclick), and name it **segformerB3_S2_comb.pth**. Alternatively, from the root of the repo, just run `gdown https://drive.google.com/uc?id=1DkFun_tiw7z7RpjDtwqV65k1e9jxnLkr -O ./Back-End/FocalClick/models/focalclick/segformerB3_S2_comb.pth`
     - Download the Mask R-CNN from [here](https://www.dropbox.com/s/cxha1jozl544bmj/model_RGB.pth?dl=0) and place it in [Back-End/Mask-RCNN](./Back-End/Mask-RCNN). The file has to be be named **model_RGB.pth**. This can also be done by simply running `curl -L -o ./Back-End/Mask-RCNN/model_RGB.pth "https://www.dropbox.com/s/cxha1jozl544bmj/model_RGB.pth?dl=1"` from the root of the repo.
