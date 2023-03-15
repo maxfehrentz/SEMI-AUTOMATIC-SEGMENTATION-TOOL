@@ -22,9 +22,12 @@ The tool can be either installed by a script or by manually executing the comman
     - `source ~/.nvm/nvm.sh`
     - this finally installs npm and Node.js v14.20.1: `nvm install v14.20.1`
 - Create a virtual environment in the root folder.
-    - `pip install virtualenv`
-    - for Linux: `sudo apt-get install python3.8-venv`
-    - `python3.8 -m venv ./venv`
+    - For Linux: 
+        - `sudo apt-get install python3.8-venv`
+        - `python3.8 -m venv ./venv`
+    - For macOS:
+        - `pip install virtualenv`
+        - `python3 -m venv ./venv`
     - `source venv/bin/activate`
 - Execute `pip install -r ./Docker/requirements.txt` in the root folder to get the requirements for the back end listed in **requirements.txt**. For macOS or when not using a NVIDIA GPU, comment out the NVIDIA dependencies. They are only used on Linux for running the tool on a NVIDIA GPU. For both platforms, run `git clone https://github.com/facebookresearch/detectron2.git` and `python -m pip install -e detectron2` in the root folder.
 - Run `npm install` in the [front end folder](./Front-End) to install all requirements for the frontend (defined in **package.json**).
